@@ -176,6 +176,9 @@ details.sec[open] summary { margin-bottom: 12px; }
 .line.row.late { border-color: var(--bad); }
 .sheet .picked { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; color: var(--muted); max-height: 160px; overflow: auto; }
 .sheet .picked span b { color: var(--fg); }
+a.btn { text-decoration: none; }
+.findrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.findrow .lbl { font: 600 12px/1.2 var(--font-body); letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
 /* parts lines */
 .lines { display: flex; flex-direction: column; gap: 6px; }
 .line { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; text-align: left; width: 100%; color: inherit; }
@@ -390,7 +393,7 @@ pre.prompt { white-space: pre-wrap; background: var(--surface-2); border: 1px so
       <div class="scan">
         <div class="row">
           <div class="how" id="howEquip"><b>Scan the equipment label:</b> copy the text off the plate with the camera and paste it here.</div>
-          <button type="button" class="btn sm quiet" id="clearScanEquip">Clear</button>
+          <span class="btnrow"><span class="btn sm filebtn" id="ocrEquipBtn">📷 Read label photo<input type="file" accept="image/*" capture="environment" id="ocrEquip" aria-label="Photograph the equipment label"></span><button type="button" class="btn sm quiet" id="clearScanEquip">Clear</button></span>
         </div>
         <textarea id="scanEquip" placeholder="Label text lands here and the fields below fill in." aria-label="Equipment label text"></textarea>
         <div class="res" id="resEquip"></div>
@@ -406,6 +409,7 @@ pre.prompt { white-space: pre-wrap; background: var(--surface-2); border: 1px so
         <div class="f half"><label for="accessories">Accessories &amp; Items Received</label><textarea id="accessories" placeholder="Keys, bagger, gas can, charger…"></textarea></div>
         <div class="f wide"><label for="condition">Condition at Intake</label><textarea id="condition" placeholder="Scratches, missing parts, tire condition, fuel level…"></textarea></div>
       </div>
+      <div class="btnrow" id="machineLinks" style="margin-top:12px"></div>
       <div id="historyList" hidden></div>
     </div>
 
@@ -414,7 +418,7 @@ pre.prompt { white-space: pre-wrap; background: var(--surface-2); border: 1px so
       <div class="scan">
         <div class="row">
           <div class="how" id="howEngine"><b>Scan the engine label</b> the same way.</div>
-          <button type="button" class="btn sm quiet" id="clearScanEngine">Clear</button>
+          <span class="btnrow"><span class="btn sm filebtn" id="ocrEngineBtn">📷 Read label photo<input type="file" accept="image/*" capture="environment" id="ocrEngine" aria-label="Photograph the engine label"></span><button type="button" class="btn sm quiet" id="clearScanEngine">Clear</button></span>
         </div>
         <textarea id="scanEngine" placeholder="Engine label text." aria-label="Engine label text"></textarea>
         <div class="res" id="resEngine"></div>
@@ -884,9 +888,9 @@ const LabelParser = (() => {
   const UA = navigator.userAgent || '';
   const PLATFORM = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(UA) ? 'android' : 'desktop';
   function platformHints() {
-    const how = { ios: 'tap the box, choose <b>Scan Text</b> and point the camera at the plate (or <b>Paste</b> after the Apple Intelligence shortcut).',
-                  android: 'open the Camera, switch to <b>Google Lens</b>, select the text on the plate, <b>Copy</b>, then paste it here.',
-                  desktop: 'paste the label text here (from a photo opened in your photo app, or typed from the plate).' }[PLATFORM];
+    const how = { ios: 'tap <b>Read label photo</b> and photograph the plate, or tap the box and choose <b>Scan Text</b> (the phone\'s own reader, often sharper on stamped metal).',
+                  android: 'tap <b>Read label photo</b> and photograph the plate, or use Camera ▸ <b>Google Lens</b> ▸ select text ▸ Copy and paste it here.',
+                  desktop: 'paste the label text here, or use <b>Read label photo</b> with a photo of the plate.' }[PLATFORM];
     $('howEquip').innerHTML = '<b>Scan the equipment label:</b> ' + how; $('howEngine').innerHTML = '<b>Scan the engine label</b> the same way.';
     document.querySelectorAll('#installRows [data-plat]').forEach(el => { const mine = el.dataset.plat === PLATFORM; el.style.fontWeight = mine && el.classList.contains('k') ? '700' : ''; if (mine && el.classList.contains('k')) el.innerHTML += ' <span class="pill done" style="margin-left:4px">this device</span>'; });
     $('shortcutSec').open = false;
@@ -1056,6 +1060,21 @@ const LabelParser = (() => {
   $('btnBack').onclick = () => { showDetail(false); renderList(); };
 
   // ======================================================================
+  // Finding parts online
+  // ======================================================================
+  const SEARCH = { amazon: ['Amazon', q => 'https://www.amazon.com/s?k=' + encodeURIComponent(q)], walmart: ['Walmart', q => 'https://www.walmart.com/search?q=' + encodeURIComponent(q)],
+    ebay: ['eBay', q => 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(q)], google: ['Google', q => 'https://www.google.com/search?q=' + encodeURIComponent(q)],
+    oem: ['OEM diagrams', q => 'https://www.google.com/search?q=' + encodeURIComponent(q + ' parts diagram')] };
+  function supplierKey(s) { s = (s || '').toLowerCase(); return s.includes('amazon') ? 'amazon' : s.includes('walmart') ? 'walmart' : s.includes('ebay') ? 'ebay' : 'google'; }
+  function findLinks(q, keys, label) { return q ? `<div class="findrow"><span class="lbl">${esc(label || 'Find it')}</span>${keys.map(k => `<a class="btn sm" target="_blank" rel="noopener" href="${SEARCH[k][1](q)}">${SEARCH[k][0]}</a>`).join('')}</div>` : ''; }
+  function partQuery(p, j) { const bits = [p.partNo, p.description].filter(Boolean); if (!bits.length) return ''; if (!p.partNo && j) bits.unshift([j.make, j.model].filter(Boolean).join(' ')); return bits.join(' ').trim(); }
+  function renderMachineLinks() {
+    const mm = [$('make').value, $('model').value].filter(Boolean).join(' ').trim(); const eng = [$('engineMake').value, $('engineModel').value].filter(Boolean).join(' ').trim();
+    $('machineLinks').innerHTML = (mm ? findLinks(mm, ['oem', 'amazon', 'ebay'], 'Parts for this machine') : '') + (eng ? findLinks(eng, ['oem', 'amazon'], 'Engine parts') : '');
+  }
+  for (const id of ['make', 'model', 'engineMake', 'engineModel']) $(id).addEventListener('input', renderMachineLinks);
+
+  // ======================================================================
   // Job form
   // ======================================================================
   function collect() {
@@ -1071,7 +1090,7 @@ const LabelParser = (() => {
     document.querySelectorAll('.f .filled').forEach(el => el.classList.remove('filled'));
     sigData = o.signature || ''; drawSig();
     $('sigStatus').textContent = o.signature ? 'Signed ' + usDate(o.sigDate || '') : '';
-    updateEst(); updateInvoice(); renderThumbs(); renderParts(); renderHistory();
+    updateEst(); updateInvoice(); renderThumbs(); renderParts(); renderHistory(); renderMachineLinks();
     $('detailTitle').innerHTML = cur.saved ? `${esc(o.customer || 'No name')}<small>${esc(fmtRO(o.ro))}</small>` : 'New job';
   }
   function blank() {
@@ -1127,8 +1146,56 @@ const LabelParser = (() => {
       else applyEngine(LabelParser.parse(text, 'engine'), f);
       res.textContent = f.n ? `${f.n} field${f.n === 1 ? '' : 's'} filled from the label. Anything it missed is still in the text above.` : 'No model or serial found. Type them from the text above.';
     }
-    renderHistory(); saveDraft();
+    renderHistory(); renderMachineLinks(); saveDraft();
   }
+  const OCR = (() => {
+    const VER = '6.0.1'; let worker = null, loading = null;
+    const script = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    async function getWorker(onProgress) {
+      if (worker) return worker;
+      if (!loading) loading = (async () => {
+        if (!window.Tesseract) await script(`https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/${VER}/tesseract.min.js`);
+        const w = await window.Tesseract.createWorker('eng', 1, { workerPath: `https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/${VER}/worker.min.js`, logger: m => { if (onProgress && m && m.status) onProgress(m); } });
+        worker = w; return w;
+      })().catch(e => { loading = null; throw e; });
+      return loading;
+    }
+    // Downscale, grayscale and stretch contrast: labels read better as high-contrast gray than as color photos.
+    function prepare(file) {
+      return new Promise((res, rej) => {
+        const img = new Image(); const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const max = 1800, s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+          const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+          const d = ctx.getImageData(0, 0, c.width, c.height), px = d.data, hist = new Uint32Array(256);
+          for (let i = 0; i < px.length; i += 4) { const g = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; px[i] = g; hist[g]++; }
+          const total = c.width * c.height; let lo = 0, hi = 255, acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > total * 0.02) { lo = v; break; } } acc = 0; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.02) { hi = v; break; } }
+          const span = Math.max(1, hi - lo); for (let i = 0; i < px.length; i += 4) { const g = Math.max(0, Math.min(255, (px[i] - lo) * 255 / span)); px[i] = px[i + 1] = px[i + 2] = g; }
+          ctx.putImageData(d, 0, 0); res(c);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a photo')); }; img.src = url;
+      });
+    }
+    async function read(file, onProgress) { const canvas = await prepare(file); const w = await getWorker(onProgress); const { data } = await w.recognize(canvas); return { text: (data.text || '').trim(), confidence: Math.round(data.confidence || 0) }; }
+    return { read, get ready() { return !!worker; } };
+  })();
+  async function readLabelPhoto(which, file) {
+    const ta = $(which === 'engine' ? 'scanEngine' : 'scanEquip'), res = $(which === 'engine' ? 'resEngine' : 'resEquip');
+    if (IN_CLAUDE) { res.textContent = 'Reading photos works in the installed copy, not in this preview.'; return; }
+    res.textContent = OCR.ready ? 'Reading the label…' : 'Loading the reader (first time only, a few seconds)…';
+    try {
+      const out = await OCR.read(file, m => { if (m.status === 'recognizing text' && m.progress) res.textContent = `Reading the label… ${Math.round(m.progress * 100)}%`; else if (/loading|initializ/i.test(m.status)) res.textContent = 'Loading the reader (first time only)…'; });
+      if (!out.text) { res.textContent = 'No text found. Fill the frame with the label, hold square to it, and try again — or use the camera\'s own text scan.'; return; }
+      // OCR fixes that are safe: a letter O or I between two digits is a 0 or 1 (e.g. 1F198H1O152 -> 1F198H10152)
+      const fixed = out.text.replace(/(?<=\d)[Oo](?=\d)/g, '0').replace(/(?<=\d)[Il](?=\d)/g, '1');
+      ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + fixed; handleScan(which);
+      const risky = [$('model').value, $('serial').value, $('engineModel').value, $('engineSerial').value].some(v => /[OIl]/.test(v) && /\d/.test(v));
+      res.textContent = res.textContent + ` Read at ${out.confidence}% confidence.` + (risky ? ' Check O vs 0 and I vs 1 in the model and serial against the plate.' : ' Compare the serial with the plate.');
+      if (photos.length < 6) { const d = await compress(file); if (d) { photos.push(d); renderThumbs(); } }
+    } catch (e) { res.textContent = 'Could not read the photo' + (navigator.onLine === false ? ' — the reader needs a connection the first time it is used.' : '.') + ' Use the camera\'s text scan instead.'; }
+  }
+  $('ocrEquip').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) readLabelPhoto('equip', f); });
+  $('ocrEngine').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) readLabelPhoto('engine', f); });
   const scanTimers = {};
   for (const [id, which] of [['scanEquip', 'equip'], ['scanEngine', 'engine']]) {
     $(id).addEventListener('paste', () => setTimeout(() => handleScan(which), 0));
@@ -1322,7 +1389,7 @@ const LabelParser = (() => {
     const jid = id ? p.jobId : (jobId || cur.id); const pj = jobs.find(x => x.id === jid);
     const card = openSheet(`<h3>${id ? 'Part line' : 'Add part'}</h3>${pj ? `<p class="note" style="margin:0">${esc(fmtRO(pj.ro))} · ${esc(pj.customer)}${equipText(pj) ? ' · ' + esc(equipText(pj)) : ''}</p>` : ''}${datalists()}<div class="grid" style="margin-top:8px">
       ${field('s_partNo', 'Part #', 'mono', p.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', p.supplier, 'list=dlSup')}
-      ${field('s_description', 'Description', 'text', p.description, 'wide')}
+      ${field('s_description', 'Description', 'text', p.description, 'wide')}<div class="wide" id="s_find"></div>
       ${field('s_qty', 'Qty', 'int', p.qty)}${field('s_unitCost', 'Unit Cost $', 'money', p.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', p.unitSell)}
       ${field('s_status', 'Status', 'select', opts(PART_STATUSES, p.status))}
       ${field('s_dateOrdered', 'Date Ordered', 'date', p.dateOrdered)}${field('s_supplierOrderNo', 'Supplier Order #', 'text', p.supplierOrderNo)}${field('s_expected', 'Expected', 'date', p.expected)}${field('s_received', 'Received', 'date', p.received)}
@@ -1337,7 +1404,8 @@ const LabelParser = (() => {
       else if (s && !isShop) g('stockHint').textContent = `This part # is on the shelf (${s.onHand} on hand). Pick supplier Shop Stock to use one from stock.`;
       else g('stockHint').textContent = '';
     };
-    g('partNo').addEventListener('input', hint); g('supplier').addEventListener('input', hint); hint();
+    const findRow = () => { g('find').innerHTML = findLinks(partQuery({ partNo: g('partNo').value.trim(), description: g('description').value.trim() }, pj), [supplierKey(g('supplier').value), 'google', 'ebay'].filter((k, i, arr) => arr.indexOf(k) === i)); };
+    g('partNo').addEventListener('input', () => { hint(); findRow(); }); g('supplier').addEventListener('input', () => { hint(); findRow(); }); g('description').addEventListener('input', findRow); hint(); findRow();
     g('status').addEventListener('change', () => { const st = g('status').value; if ((st === 'Received' || st === 'Installed') && !g('received').value) g('received').value = todayISO(); if ((st === 'Ordered' || st === 'Backordered') && !g('dateOrdered').value) g('dateOrdered').value = todayISO(); });
     g('cancel').onclick = closeSheet;
     g('save').onclick = async () => {
@@ -1365,7 +1433,7 @@ const LabelParser = (() => {
   function orderLine(p, j, today) {
     const late = p.status === 'Ordered' && p.expected && p.expected < today;
     const when = partNeeded(p) ? (p.dateOrdered ? 'needed since ' + usDate(p.dateOrdered) : '') : partOnOrder(p) ? [p.dateOrdered ? 'ordered ' + usDate(p.dateOrdered) : '', p.expected ? (late ? 'was expected ' : 'expected ') + usDate(p.expected) : ''].filter(Boolean).join(' · ') : (p.received ? 'received ' + usDate(p.received) : '');
-    const qa = partOnOrder(p) ? `<button type="button" class="btn sm qa" data-qa="received" data-id="${p.id}">Received</button>` : p.status === 'Received' ? `<button type="button" class="btn sm qa" data-qa="installed" data-id="${p.id}">Installed</button>` : partNeeded(p) ? `<button type="button" class="btn sm qa" data-qa="order" data-id="${p.id}">Ordered</button>` : '';
+    const fq = partQuery(p, j); const qa = partOnOrder(p) ? `<button type="button" class="btn sm qa" data-qa="received" data-id="${p.id}">Received</button>` : p.status === 'Received' ? `<button type="button" class="btn sm qa" data-qa="installed" data-id="${p.id}">Installed</button>` : partNeeded(p) ? `${fq ? `<a class="btn sm qa" target="_blank" rel="noopener" href="${SEARCH[supplierKey(p.supplier)][1](fq)}" title="Search ${SEARCH[supplierKey(p.supplier)][0]}">Find</a>` : ''}<button type="button" class="btn sm qa" data-qa="order" data-id="${p.id}">Ordered</button>` : '';
     return `<div class="line row ${partActive(p) ? '' : 'off'} ${partNeeded(p) ? 'needed' : ''} ${late ? 'late' : ''}" data-id="${p.id}" role="button" tabindex="0">
       <span class="l1"><span class="pn">${esc(p.partNo || '—')}</span>${esc(p.description || 'No description')}</span>
       <span class="amt">${esc(String(num(p.qty)))} × ${fmtMoney(p.unitCost)}<small>${esc(p.status)}</small></span>${qa}
@@ -1394,7 +1462,7 @@ const LabelParser = (() => {
       if (re.length) html += `<div class="grp"><h3>Shop stock below minimum<small>${re.length} part${re.length === 1 ? '' : 's'}</small></h3></div><div class="lines">${re.map(s => `<div class="line row needed" data-restock="${esc(s.partNo)}" role="button" tabindex="0"><span class="l1"><span class="pn">${esc(s.partNo)}</span>${esc(s.description || '')}</span><span class="amt">${s.onHand} on hand<small>min ${s.minKeep == null ? 0 : s.minKeep}</small></span><button type="button" class="btn sm qa" data-restock-btn="${esc(s.partNo)}">Restock</button><span class="l2">${esc(s.supplier || 'supplier not recorded')}${s.unitCost != null ? ' · last cost ' + fmtMoney(s.unitCost) : ''}</span></div>`).join('')}</div>`;
     }
     $('ordersList').innerHTML = html;
-    $('ordersList').querySelectorAll('.line[data-id]').forEach(el => { el.onclick = e => { if (e.target.closest('.qa')) return; partSheet(el.dataset.id); }; el.onkeydown = e => { if (e.key === 'Enter') partSheet(el.dataset.id); }; });
+    $('ordersList').querySelectorAll('.line[data-id]').forEach(el => { el.onclick = e => { if (e.target.closest('.qa') || e.target.closest('a')) return; partSheet(el.dataset.id); }; el.onkeydown = e => { if (e.key === 'Enter') partSheet(el.dataset.id); }; });
     $('ordersList').querySelectorAll('.qa[data-qa]').forEach(b => b.onclick = e => { e.stopPropagation(); quickStatus(b.dataset.id, b.dataset.qa); });
     $('ordersList').querySelectorAll('[data-order-group]').forEach(b => b.onclick = () => orderGroupSheet(rows.filter(p => ((p.supplier || '').trim() || 'No supplier yet') === b.dataset.orderGroup)));
     $('ordersList').querySelectorAll('[data-receive-group]').forEach(b => b.onclick = async () => { const ps = rows.filter(p => ((p.supplier || '').trim() || 'No supplier yet') === b.dataset.receiveGroup); const t = todayISO(), now = new Date().toISOString(); const upd = ps.map(p => ({ ...p, status: 'Received', received: p.received || t, updated: now })); if (!(await Data.saveMany('parts', upd))) { toast('Could not save'); return; } const ids = new Set(upd.map(p => p.id)); parts = [...parts.filter(p => !ids.has(p.id)), ...upd]; afterPartsChange(); toast(`${upd.length} line${upd.length === 1 ? '' : 's'} received`); });
@@ -1450,13 +1518,15 @@ const LabelParser = (() => {
     const l = id ? stock.find(x => x.id === id) : { date: todayISO(), partNo: '', description: '', qty: 1, supplier: '', supplierOrderNo: '', unitCost: '', unitSell: '', status: 'Ordered', expected: '', received: '', notes: '', minKeep: '', ...(prefill || {}) };
     const card = openSheet(`<h3>${id ? 'Restock line' : 'Restock'}</h3>${datalists()}<p class="note" style="margin:0 0 8px">First time for a part: fill everything in. Repeat order: pick the Part # and the description, prices and minimum carry forward. Already on the shelf: supplier <b>On shelf</b>, status <b>Received</b>.</p><div class="grid">
       ${field('s_partNo', 'Part #', 'mono', l.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', l.supplier, 'list=dlSup')}
-      ${field('s_description', 'Description', 'text', l.description, 'wide')}
+      ${field('s_description', 'Description', 'text', l.description, 'wide')}<div class="wide" id="s_find"></div>
       ${field('s_qty', 'Qty', 'int', l.qty)}${field('s_unitCost', 'Unit Cost $', 'money', l.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', l.unitSell)}${field('s_minKeep', 'Min to keep', 'int', l.minKeep)}
       ${field('s_status', 'Status', 'select', opts(STOCK_STATUSES, l.status))}${field('s_date', 'Date', 'date', l.date)}${field('s_expected', 'Expected', 'date', l.expected)}${field('s_received', 'Received', 'date', l.received)}
       ${field('s_supplierOrderNo', 'Supplier Order #', 'text', l.supplierOrderNo)}${field('s_notes', 'Notes', 'textarea', l.notes)}</div>
       <div class="acts row"><button type="button" class="btn primary" id="s_save">${id ? 'Save line' : 'Add line'}</button><button type="button" class="btn quiet" id="s_cancel">Cancel</button>${id ? '<button type="button" class="btn danger" id="s_del" style="grid-column:1/-1">Remove this line</button>' : ''}</div>`);
     const g = k => card.querySelector('#s_' + k);
     g('partNo').addEventListener('change', () => { const s = stockByPN().get((g('partNo').value || '').trim().toUpperCase()); if (!s) return; if (!g('description').value) g('description').value = s.description || ''; if (!g('supplier').value && s.supplier) g('supplier').value = s.supplier; if (g('unitCost').value === '' && s.unitCost != null) g('unitCost').value = s.unitCost; if (g('unitSell').value === '' && s.unitSell != null) g('unitSell').value = s.unitSell; });
+    const findRow = () => { g('find').innerHTML = findLinks(partQuery({ partNo: g('partNo').value.trim(), description: g('description').value.trim() }), [supplierKey(g('supplier').value), 'google', 'ebay'].filter((k, i, arr) => arr.indexOf(k) === i)); };
+    g('partNo').addEventListener('input', findRow); g('description').addEventListener('input', findRow); g('supplier').addEventListener('input', findRow); findRow();
     g('status').addEventListener('change', () => { if (g('status').value === 'Received' && !g('received').value) g('received').value = todayISO(); });
     g('supplier').addEventListener('change', () => { if (/^on shelf$/i.test(g('supplier').value.trim())) { g('status').value = 'Received'; if (!g('received').value) g('received').value = g('date').value || todayISO(); } });
     g('cancel').onclick = closeSheet;
