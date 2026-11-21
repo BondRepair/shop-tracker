@@ -1,0 +1,1820 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style><title>Bond Shop Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shop Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#171C22">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: phone = one column with list→detail navigation; iPad (≥900px) = two panes, jobs list left, open job right, field grids 4 across. Serials and part numbers in a monospace face so 0/O and 1/I are tellable apart. Print styles render the Repair Order (page 1) and Invoice (page 2) from #printView only. */
+:root {
+  --bg: #EDF0F3; --surface: #FFFFFF; --surface-2: #F5F7F9; --line: #D4DAE1; --line-strong: #AEB7C1;
+  --fg: #171C22; --muted: #5B6672; --faint: #8A95A1;
+  --accent: #E00000; --accent-fg: #FFFFFF; --accent-soft: #FDE3E1; --accent-ink: #B40000;
+  --good: #27784A; --good-soft: #DDF2E5; --warn: #A86E12; --warn-soft: #FBEFD2; --bad: #9C1F1F; --bad-soft: #F8DEDC;
+  --scan: #E7ECF2; --shadow: 0 1px 2px rgba(23,28,34,.08), 0 6px 20px -8px rgba(23,28,34,.18);
+  --font-display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --r: 8px; --header-h: 92px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121619; --surface: #1B2026; --surface-2: #222830; --line: #313A44; --line-strong: #4A5663;
+  --fg: #E7EBEF; --muted: #A3ADB7; --faint: #76818C;
+  --accent: #F23A3A; --accent-fg: #FFFFFF; --accent-soft: #3F1616; --accent-ink: #FF8A86;
+  --good: #5FC487; --good-soft: #17301F; --warn: #E3AB4D; --warn-soft: #352A12; --bad: #F08A84; --bad-soft: #3A1B19;
+  --scan: #171C22; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -10px rgba(0,0,0,.6);
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #121619; --surface: #1B2026; --surface-2: #222830; --line: #313A44; --line-strong: #4A5663;
+  --fg: #E7EBEF; --muted: #A3ADB7; --faint: #76818C;
+  --accent: #F23A3A; --accent-fg: #FFFFFF; --accent-soft: #3F1616; --accent-ink: #FF8A86;
+  --good: #5FC487; --good-soft: #17301F; --warn: #E3AB4D; --warn-soft: #352A12; --bad: #F08A84; --bad-soft: #3A1B19;
+  --scan: #171C22; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -10px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.4 var(--font-body); -webkit-text-size-adjust: 100%; min-height: 100%; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--fg); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--fg); color: var(--bg); }
+.top .inner { max-width: 1200px; margin: 0 auto; padding-block: 10px 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; font: 700 26px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.brand .tag { font: 500 12px/1.2 var(--font-body); letter-spacing: .04em; opacity: .75; text-transform: uppercase; white-space: nowrap; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); margin-right: 7px; vertical-align: 1px; }
+.dot.on { background: var(--good); } .dot.wait { background: var(--warn); } .dot.err { background: var(--bad); }
+.tabs { display: flex; gap: 2px; margin-top: 10px; }
+.tabs button { flex: 1; background: transparent; border: 0; border-bottom: 3px solid transparent; color: inherit; opacity: .7; padding: 8px 4px 10px; font: 600 15px/1 var(--font-body); letter-spacing: .02em; white-space: nowrap; }
+.tabs button[aria-selected="true"] { opacity: 1; border-bottom-color: var(--accent); }
+.tabs .count { display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 10px; background: var(--accent); color: var(--accent-fg); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
+.tabs .count:empty { display: none; }
+
+main { max-width: 1200px; margin: 0 auto; padding-block: 16px 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* sections & fields */
+.sec { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 14px 16px; margin-bottom: 14px; min-width: 0; }
+.sec h2 { margin: 0 0 12px; font: 700 15px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.sec h2 .sub { font: 500 12px/1.2 var(--font-body); letter-spacing: 0; text-transform: none; color: var(--faint); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid .wide { grid-column: 1 / -1; }
+.grid > * { min-width: 0; }
+@media (max-width: 430px) { .grid { grid-template-columns: 1fr; } .two { grid-template-columns: 1fr 1fr !important; } }
+.f label { display: block; font: 600 12px/1.2 var(--font-body); letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.f label .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--faint); }
+.f input, .f select, .f textarea { width: 100%; min-width: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 10px; font-size: 16px; }
+.f textarea { min-height: 64px; resize: vertical; }
+.f input.mono, .mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .02em; }
+.f input.mono { text-transform: uppercase; }
+.f input.money { text-align: right; font-variant-numeric: tabular-nums; }
+.f .hint { font-size: 12px; color: var(--faint); margin-top: 4px; }
+.f .filled { background: var(--accent-soft); border-color: var(--accent); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+.seg label { flex: 1; margin: 0; text-align: center; padding: 10px 4px; font: 500 15px/1 var(--font-body); text-transform: none; letter-spacing: 0; color: var(--fg); border-right: 1px solid var(--line); }
+.seg label:last-child { border-right: 0; }
+.seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.seg label:has(input:checked) { background: var(--fg); color: var(--bg); }
+
+/* scan box */
+.scan { background: var(--scan); border: 1.5px dashed var(--line-strong); border-radius: var(--r); padding: 10px; margin-bottom: 12px; }
+.scan textarea { width: 100%; min-height: 58px; background: transparent; border: 0; padding: 4px; resize: vertical; font: 400 14px/1.35 var(--font-mono); }
+.scan textarea:focus { outline: none; }
+.scan .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.scan .how { font-size: 13px; color: var(--muted); }
+.scan .how b { color: var(--fg); font-weight: 600; }
+.scan .res { font-size: 13px; color: var(--accent-ink); font-weight: 600; min-height: 1.2em; }
+
+.ro-row { display: flex; gap: 8px; align-items: stretch; }
+.ro-row input { flex: 1; }
+.est { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 10px; font-size: 14px; color: var(--muted); }
+.est b { font: 600 18px/1 var(--font-display); color: var(--fg); font-variant-numeric: tabular-nums; }
+
+details.sec summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+details.sec summary::-webkit-details-marker { display: none; }
+details.sec summary h2 { margin: 0; }
+details.sec summary .chev { color: var(--faint); transition: transform .15s; }
+details.sec[open] summary .chev { transform: rotate(180deg); }
+details.sec[open] summary { margin-bottom: 12px; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); border-radius: 6px; padding: 10px 14px; font: 600 15px/1 var(--font-body); white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.danger { color: var(--bad); border-color: var(--bad); }
+.btn.sm { padding: 7px 10px; font-size: 13px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* jobs: list / detail */
+.jobs-layout { display: block; }
+.list-pane .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.list-pane .toolbar input { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 6px 11px; font: 600 13px/1 var(--font-body); }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.job { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; text-align: left; width: 100%; color: inherit; }
+.job[aria-current="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.job .ro { font: 500 14px/1 var(--font-mono); color: var(--muted); }
+.job .who { font: 600 17px/1.2 var(--font-body); }
+.job .what { font-size: 14px; color: var(--muted); }
+.job .date { font-size: 13px; color: var(--faint); text-align: right; white-space: nowrap; }
+.pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font: 600 12px/1.2 var(--font-body); white-space: nowrap; justify-self: end; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.pill.wait { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.pill.work { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+.pill.done { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.pill.bad  { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.pill.late { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; border: 1.5px dashed var(--line-strong); border-radius: var(--r); }
+.empty b { display: block; font: 700 20px/1.2 var(--font-display); color: var(--fg); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-width: 0; }
+.detail-head .title { font: 700 22px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-head .title small { font: 500 13px/1 var(--font-mono); color: var(--muted); text-transform: none; letter-spacing: 0; margin-left: 8px; }
+.actionbar { position: sticky; bottom: 0; z-index: 8; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r) var(--r) 0 0; box-shadow: 0 -6px 20px -12px rgba(0,0,0,.35); padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); margin: 0 -4px; }
+.actionbar .inner { display: flex; gap: 8px; }
+.actionbar .btn { flex: 1; padding-block: 13px; }
+.actionbar .btn.sq { flex: 0 0 auto; padding-inline: 14px; }
+@media (max-width: 899px) {
+  .jobs-layout.show-detail .list-pane { display: none; }
+  .jobs-layout:not(.show-detail) .detail-pane { display: none; }
+}
+@media (min-width: 900px) {
+  .jobs-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .list-pane { position: sticky; top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - var(--header-h) - env(safe-area-inset-top, 0px) - 28px); overflow: auto; padding-right: 4px; }
+  .detail-head .back { display: none; }
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .grid .half { grid-column: span 2; }
+  .grid.two { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .stock-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .dash-grid .wide { grid-column: 1 / -1; }
+}
+
+/* segment row (Job parts / Shop stock) */
+.segrow { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px; margin-bottom: 14px; gap: 4px; }
+.segbtn { flex: 1; border: 0; background: transparent; color: var(--muted); border-radius: 6px; padding: 10px 8px; font: 600 15px/1 var(--font-body); }
+.segbtn[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.segbtn .count { display: inline-block; min-width: 20px; padding: 1px 6px; border-radius: 10px; background: var(--accent); color: var(--accent-fg); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
+.segbtn .count:empty { display: none; }
+.grp { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 6px; }
+.grp:first-child { margin-top: 0; }
+.grp h3 { margin: 0; font: 700 14px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.grp h3 small { font: 500 12px/1 var(--font-body); letter-spacing: 0; text-transform: none; color: var(--faint); margin-left: 6px; }
+.line.row { cursor: pointer; grid-template-columns: 1fr auto auto; align-items: center; }
+.line.row .l2 { grid-column: 1 / -1; }
+.line.row .qa { padding: 6px 9px; font-size: 12px; align-self: center; }
+.line.row.needed .l1 .pn { color: var(--accent-ink); }
+.line.row.late { border-color: var(--bad); }
+.sheet .picked { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; color: var(--muted); max-height: 160px; overflow: auto; }
+.sheet .picked span b { color: var(--fg); }
+/* parts lines */
+.lines { display: flex; flex-direction: column; gap: 6px; }
+.line { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; text-align: left; width: 100%; color: inherit; }
+.line .l1 { font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.line .l1 .pn { font: 500 13px/1 var(--font-mono); color: var(--muted); }
+.line .l2 { font-size: 13px; color: var(--muted); }
+.line .amt { font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; white-space: nowrap; }
+.line .amt small { display: block; font-weight: 400; color: var(--faint); font-size: 12px; }
+.line.off .l1, .line.off .amt { color: var(--faint); text-decoration: line-through; }
+.tot { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; font-size: 14px; color: var(--muted); border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 10px; }
+.tot b { color: var(--fg); font-variant-numeric: tabular-nums; text-align: right; }
+.tot .big { font: 700 20px/1.1 var(--font-display); color: var(--fg); }
+.tot .due b { color: var(--accent-ink); }
+
+/* signature */
+.sig { position: relative; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; height: 150px; overflow: hidden; }
+.sig canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.sig .baseline { position: absolute; left: 16px; right: 16px; bottom: 34px; border-top: 1px solid var(--line-strong); pointer-events: none; }
+.sig .x { position: absolute; left: 16px; bottom: 36px; color: var(--faint); font-size: 14px; pointer-events: none; }
+.sig .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); font-size: 14px; pointer-events: none; }
+.sig img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+/* photos */
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.thumb { position: relative; width: 84px; height: 84px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 14px; line-height: 1; }
+.filebtn { position: relative; overflow: hidden; }
+.filebtn input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+/* tables (stock summary, sales & tax) */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.tbl { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tbl th { text-align: left; font: 600 11px/1.2 var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 8px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tbl td.n, .tbl th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl tr.sub td { background: var(--surface-2); font-weight: 600; }
+.tbl tr.year td { background: var(--accent-soft); font-weight: 700; }
+.tbl tr.rowbtn { cursor: pointer; }
+.tbl tr.rowbtn:hover td { background: var(--surface-2); }
+.tbl .pill { justify-self: auto; }
+
+/* dashboard tiles */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 600px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; text-align: left; color: inherit; min-width: 0; }
+.tile .v { font: 700 26px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.tile .k { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.tile.alert .v { color: var(--bad); }
+.tile.go .v { color: var(--good); }
+.tile.warn .v { color: var(--warn); }
+
+/* setup */
+.steps { margin: 0; padding-left: 22px; }
+.steps li { margin-bottom: 8px; }
+.steps b { font-weight: 600; }
+pre.prompt { white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px; font: 400 13px/1.45 var(--font-mono); margin: 8px 0; max-height: 260px; overflow: auto; }
+.note { font-size: 14px; color: var(--muted); }
+.note b { color: var(--fg); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; align-items: baseline; }
+.kv .k { color: var(--muted); }
+
+/* toast + sheet */
+#toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; transition: .2s; z-index: 40; max-width: calc(100vw - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
+.sheet .card { background: var(--surface); width: 100%; max-width: 760px; border-radius: 12px 12px 0 0; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-shadow: var(--shadow); max-height: 88vh; overflow: auto; }
+@media (min-width: 900px) { .sheet { align-items: center; } .sheet .card { border-radius: 12px; max-height: 85vh; } }
+.sheet h3 { margin: 0 0 6px; font: 700 20px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; }
+.sheet .acts { display: grid; gap: 8px; margin-top: 12px; }
+.sheet .acts.row { grid-template-columns: 1fr 1fr; }
+.sheet textarea.out { width: 100%; min-height: 120px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; font: 400 13px/1.4 var(--font-mono); }
+.sheet .acts .btn { justify-content: flex-start; }
+.sheet .acts.row .btn { justify-content: center; }
+.editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--accent-soft); color: var(--accent-ink); border-radius: var(--r); padding: 10px 14px; margin-bottom: 14px; font-weight: 600; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- print view (Repair Order page 1, Invoice page 2) ---------- */
+#printView { position: fixed; inset: 0; z-index: 50; background: #6B7280; overflow: auto; padding: 16px; display: none; }
+#printView.on { display: block; }
+#printView .bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin: -16px -16px 12px; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); background: #1F2937; color: #F3F4F6; }
+#printView .bar .msg { margin-right: auto; font-size: 13px; opacity: .85; }
+.page { background: #fff; color: #111; width: 8.5in; min-height: 11in; margin: 0 auto 16px; padding: .45in .5in; box-shadow: 0 2px 12px rgba(0,0,0,.3); font: 10pt/1.3 Arial, Helvetica, sans-serif; position: relative; }
+.page * { color: #111; }
+.page .hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 8px; }
+.page .hd .biz { font: 700 15pt/1.1 Arial; }
+.page .hd .tag { font: 600 8.5pt/1.2 Arial; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.page .hd .sub { font-size: 8.5pt; margin-top: 3px; }
+.page .hd .ro { text-align: right; flex: 0 0 auto; }
+.page .hd .ro .t { font: 700 15pt/1.1 Arial; letter-spacing: .04em; }
+.page .hd .ro .n { font: 700 12pt/1.3 'Courier New', monospace; white-space: nowrap; }
+.page .hd .ro .d { font-size: 8.5pt; }
+.page h3 { margin: 7px 0 3px; font: 700 9pt/1.2 Arial; letter-spacing: .06em; text-transform: uppercase; background: #E5E7EB; padding: 3px 6px; }
+.page .g { display: grid; gap: 6px 10px; }
+.page .g.c2 { grid-template-columns: 1fr 1fr; } .page .g.c3 { grid-template-columns: 2fr 1fr 1fr; } .page .g.c4 { grid-template-columns: 1fr 1fr 1fr 1fr; } .page .g.c5 { grid-template-columns: 1fr 1.2fr 1.2fr 1.6fr .8fr; }
+.page .fld .k { font: 700 7pt/1.2 Arial; letter-spacing: .04em; text-transform: uppercase; color: #374151; }
+.page .fld .v { border-bottom: 1px solid #9CA3AF; min-height: 15pt; padding: 1px 2px; word-wrap: break-word; }
+.page .fld .v.mono { font-family: 'Courier New', monospace; font-size: 10pt; }
+.page .fld .v.money { text-align: right; font-weight: 700; }
+.page .fld .v.tall { min-height: 30pt; white-space: pre-wrap; }
+.page .auth { margin-top: 6px; font-size: 9pt; }
+.page .sigrow { display: grid; grid-template-columns: 2.2fr 1fr; gap: 10px; margin-top: 4px; align-items: end; }
+.page .sigbox { border-bottom: 1px solid #111; height: 44pt; position: relative; }
+.page .sigbox img { position: absolute; left: 0; bottom: 0; height: 100%; max-width: 100%; object-fit: contain; object-position: left bottom; }
+.page .sigbox .x { position: absolute; left: 0; bottom: 2px; font-size: 9pt; color: #6B7280; }
+.page .terms { font-size: 6.9pt; line-height: 1.22; columns: 2; column-gap: 12px; margin-top: 2px; }
+.page .terms p { margin: 0 0 2px; break-inside: avoid; }
+.page table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+.page th { text-align: left; font: 700 7pt/1.2 Arial; letter-spacing: .04em; text-transform: uppercase; color: #374151; border-bottom: 1px solid #111; padding: 2px 4px; }
+.page td { border-bottom: 1px solid #D1D5DB; padding: 3px 4px; vertical-align: top; }
+.page td.n, .page th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.page tr.total td { border-bottom: 0; border-top: 2px solid #111; font-weight: 700; }
+.page .totals { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 6px; }
+.page .totals .fld .v { font-weight: 700; text-align: right; }
+.page .totals .due .k { color: #111; } .page .totals .due .v { border: 2px solid #111; font-size: 11pt; }
+.page .foot { position: absolute; left: .5in; right: .5in; bottom: .35in; font-size: 8pt; text-align: center; border-top: 1px solid #9CA3AF; padding-top: 4px; }
+.page .pageno { position: absolute; right: .5in; bottom: .18in; font-size: 7pt; color: #6B7280; }
+@media screen and (max-width: 900px) { .page { width: 100%; min-height: 0; padding: 14px; } .page .foot, .page .pageno { position: static; margin-top: 12px; } .page .terms { columns: 1; } .page .totals { grid-template-columns: repeat(4, 1fr); } }
+@media print {
+  @page { size: letter; margin: 0; }
+  body { background: #fff; }
+  body > *:not(#printView), body::before { display: none !important; }
+  #printView { display: block !important; position: static; background: #fff; padding: 0; overflow: visible; }
+  #printView .bar { display: none; }
+  .page { box-shadow: none; margin: 0; width: 8.5in; height: 11in; min-height: 0; page-break-after: always; padding: .45in .5in; }
+  .page:last-child { page-break-after: auto; }
+  .page .terms { columns: 2; }
+}
+</style>
+</head><body><header class="top">
+  <div class="inner">
+    <div class="brand">
+      <h1 id="shopName">Bond Small Engine</h1>
+      <div class="tag"><span class="dot" id="syncDot" title="Sync off"></span><span id="shopTag">Shop tracker</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-jobs" aria-selected="true" aria-controls="view-jobs">Jobs <span class="count" id="jobCount"></span></button>
+      <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="view-stock">Parts <span class="count" id="stockCount"></span></button>
+      <button type="button" role="tab" id="tab-dash" aria-selected="false" aria-controls="view-dash">Dashboard</button>
+      <button type="button" role="tab" id="tab-setup" aria-selected="false" aria-controls="view-setup">Setup</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ================= JOBS ================= -->
+<section id="view-jobs" role="tabpanel" aria-labelledby="tab-jobs">
+<div class="jobs-layout" id="jobsLayout">
+  <aside class="list-pane">
+    <div class="toolbar">
+      <input id="search" placeholder="Search name, R.O., make, serial…" aria-label="Search jobs">
+      <button type="button" class="btn primary" id="btnNewJob">+ New job</button>
+    </div>
+    <div class="filters" id="filters">
+      <button type="button" class="chip" data-f="open" aria-pressed="true">Open</button>
+      <button type="button" class="chip" data-f="parts" aria-pressed="false">Waiting on parts</button>
+      <button type="button" class="chip" data-f="ready" aria-pressed="false">Ready</button>
+      <button type="button" class="chip" data-f="closed" aria-pressed="false">Closed</button>
+      <button type="button" class="chip" data-f="all" aria-pressed="false">All</button>
+    </div>
+    <div id="jobList"></div>
+  </aside>
+
+  <div class="detail-pane">
+    <div class="detail-head">
+      <button type="button" class="btn sm back" id="btnBack">‹ Jobs</button>
+      <div class="title" id="detailTitle">New job</div>
+      <button type="button" class="btn sm" id="btnDetailMore" aria-label="More actions">⋯</button>
+    </div>
+
+    <div class="editing" id="remoteNote" hidden><span>This job was changed on another device.</span><button type="button" class="btn sm" id="btnRemoteReload">Reload it</button></div>
+    <form id="jobForm" novalidate>
+    <div class="sec">
+      <h2>Job <span class="sub">R.O. number: year-month-sequence</span></h2>
+      <div class="grid">
+        <div class="f">
+          <label for="ro">R.O. #</label>
+          <div class="ro-row">
+            <input id="ro" class="mono" inputmode="numeric" placeholder="2026-11-0001" autocomplete="off">
+            <button type="button" class="btn sm" id="btnNextRO" title="Next number for this month">Next</button>
+          </div>
+        </div>
+        <div class="f"><label for="dateIn">Date In</label><input id="dateIn" type="date"></div>
+        <div class="f"><label for="arrival">Arrival</label>
+          <select id="arrival"><option>Drop-off</option><option>Pickup / Delivery</option><option>Onsite</option></select></div>
+        <div class="f"><label for="status">Status</label>
+          <select id="status"><option>Waiting on Diagnosis</option><option>Waiting on Approval</option><option>Waiting on Parts</option><option>Ready to Work</option><option>In Progress</option><option>Done - Call Customer</option><option>Picked Up / Delivered</option><option>Complete - Onsite</option><option>Abandoned</option></select></div>
+        <div class="f half"><label for="pickupAddress">Pickup / Delivery / Onsite Address <span class="opt">(if not a drop-off)</span></label><input id="pickupAddress" autocomplete="off"></div>
+        <div class="f"><label for="promised">Promised Date <span class="opt">(optional)</span></label><input id="promised" type="date"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Customer</h2>
+      <div class="grid">
+        <div class="f half"><label for="customer">Customer Name</label><input id="customer" autocomplete="off" autocapitalize="words"></div>
+        <div class="f"><label for="phone">Phone <span class="opt">(call / text)</span></label><input id="phone" type="tel" inputmode="tel" autocomplete="off"></div>
+        <div class="f"><label for="email">Email</label><input id="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off"></div>
+        <div class="f half"><label for="address">Address</label><input id="address" autocomplete="off"></div>
+        <div class="f half"><label>Photo ID Checked <span class="opt">(motorcycles / ATVs / UTVs)</span></label>
+          <div class="seg" id="idChecked">
+            <label><input type="radio" name="idChecked" value="Yes">Yes</label>
+            <label><input type="radio" name="idChecked" value="No">No</label>
+            <label><input type="radio" name="idChecked" value="N/A" checked>N/A</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Equipment <span class="sub" id="historyNote"></span></h2>
+      <div class="scan">
+        <div class="row">
+          <div class="how" id="howEquip"><b>Scan the equipment label:</b> copy the text off the plate with the camera and paste it here.</div>
+          <button type="button" class="btn sm quiet" id="clearScanEquip">Clear</button>
+        </div>
+        <textarea id="scanEquip" placeholder="Label text lands here and the fields below fill in." aria-label="Equipment label text"></textarea>
+        <div class="res" id="resEquip"></div>
+      </div>
+      <div class="grid">
+        <div class="f"><label for="type">Type</label>
+          <select id="type"><option value="">—</option><option>Push Mower</option><option>Riding Mower</option><option>Zero-Turn</option><option>Chainsaw</option><option>Trimmer / Blower</option><option>Generator</option><option>Pressure Washer</option><option>Welder</option><option>ATV</option><option>UTV / Side-by-side</option><option>Motorcycle</option><option>Other</option></select></div>
+        <div class="f"><label for="make">Make</label><input id="make" autocomplete="off" autocapitalize="words"></div>
+        <div class="f"><label for="model">Model</label><input id="model" class="mono" autocomplete="off" autocapitalize="characters"></div>
+        <div class="f"><label for="serial">Serial No. / VIN</label><input id="serial" class="mono" autocomplete="off" autocapitalize="characters"></div>
+        <div class="f"><label for="dom">Date of Manufacture</label><input id="dom" autocomplete="off" placeholder="MM/YYYY"></div>
+        <div class="f"><label for="hours">Hours / Miles</label><input id="hours" inputmode="decimal" autocomplete="off"></div>
+        <div class="f half"><label for="accessories">Accessories &amp; Items Received</label><textarea id="accessories" placeholder="Keys, bagger, gas can, charger…"></textarea></div>
+        <div class="f wide"><label for="condition">Condition at Intake</label><textarea id="condition" placeholder="Scratches, missing parts, tire condition, fuel level…"></textarea></div>
+      </div>
+      <div id="historyList" hidden></div>
+    </div>
+
+    <div class="sec">
+      <h2>Engine</h2>
+      <div class="scan">
+        <div class="row">
+          <div class="how" id="howEngine"><b>Scan the engine label</b> the same way.</div>
+          <button type="button" class="btn sm quiet" id="clearScanEngine">Clear</button>
+        </div>
+        <textarea id="scanEngine" placeholder="Engine label text." aria-label="Engine label text"></textarea>
+        <div class="res" id="resEngine"></div>
+      </div>
+      <div class="grid">
+        <div class="f"><label for="engineMake">Engine Make</label><input id="engineMake" autocomplete="off" autocapitalize="words"></div>
+        <div class="f"><label for="engineModel">Engine Model / Spec</label><input id="engineModel" class="mono" autocomplete="off" autocapitalize="characters"></div>
+        <div class="f half"><label for="engineSerial">Engine Serial</label><input id="engineSerial" class="mono" autocomplete="off" autocapitalize="characters"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Customer's description of the problem / work requested</h2>
+      <div class="f"><textarea id="problem" aria-label="Problem in the customer's words" style="min-height:90px" placeholder="In the customer's words."></textarea></div>
+    </div>
+
+    <div class="sec">
+      <h2>Estimate &amp; Authorization</h2>
+      <div class="grid two">
+        <div class="f"><label for="diagFee">Diagnostic Fee $ <span class="opt">(credited to repair)</span></label><input id="diagFee" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f"><label for="pickupFee">Pickup / Delivery Fee $</label><input id="pickupFee" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f"><label for="estParts">Estimated Parts $</label><input id="estParts" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f"><label for="estLabor">Estimated Labor $</label><input id="estLabor" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f half"><label for="authUpTo">Authorized Up To $ <span class="opt">(customer's limit without a call)</span></label><input id="authUpTo" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f half"><label for="deposit">Deposit Taken $</label><input id="deposit" class="money" type="number" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="est"><span>Estimated total <span id="estTaxNote">incl. sales tax on parts</span></span><b id="estTotal">$0.00</b></div>
+      <div class="f" style="margin-top:12px">
+        <label>Customer Signature <span class="opt">(sign with a finger; prints on the Repair Order)</span></label>
+        <div class="sig" id="sigWrap">
+          <canvas id="sigCanvas"></canvas>
+          <div class="baseline"></div><div class="x">×</div>
+          <div class="ph" id="sigPh">Customer signs here</div>
+        </div>
+        <div class="btnrow" style="margin-top:8px;justify-content:space-between">
+          <span class="hint" id="sigStatus" style="font-size:12px;color:var(--faint)"></span>
+          <button type="button" class="btn sm quiet" id="btnSigClear">Clear signature</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" id="partsSec">
+      <h2>Parts on this job <span class="sub">a part off your own shelf: supplier Shop Stock</span></h2>
+      <div class="lines" id="partsList"></div>
+      <div class="btnrow" style="margin-top:10px"><button type="button" class="btn" id="btnAddPart">+ Add part</button><span class="note" id="partsNote"></span></div>
+    </div>
+
+    <div class="sec" id="workSec">
+      <h2>Work performed &amp; charges</h2>
+      <div class="grid">
+        <div class="f wide"><label for="work">Repairs Performed — detailed write-up <span class="opt">(prints on the invoice)</span></label><textarea id="work" style="min-height:90px"></textarea></div>
+        <div class="f"><label for="labor">Labor $</label><input id="labor" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f"><label for="other">Other Charges $ <span class="opt">(fuel disposal, storage)</span></label><input id="other" class="money" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="f"><label for="taxRate">Tax Rate Override % <span class="opt">(blank = shop default)</span></label><input id="taxRate" class="money" type="number" step="0.1" inputmode="decimal"></div>
+        <div class="f"><label for="dateDone">Date Done</label><input id="dateDone" type="date"></div>
+        <div class="f"><label for="datePicked">Date Picked Up / Paid</label><input id="datePicked" type="date"></div>
+        <div class="f"><label for="payment">Payment Method</label>
+          <select id="payment"><option value="">—</option><option>Cash</option><option>Card</option><option>Check</option><option>Other</option></select></div>
+        <div class="f half"><label for="releasedTo">Released To <span class="opt">(name, if not the customer)</span></label><input id="releasedTo" autocomplete="off" autocapitalize="words"></div>
+        <div class="f wide"><label for="notes">Shop notes <span class="opt">(not printed)</span></label><textarea id="notes"></textarea></div>
+      </div>
+      <div class="tot" id="invTot">
+        <span>Parts <span id="invPartsNote" class="hint" style="display:inline"></span></span><b id="invParts">$0.00</b>
+        <span>Labor</span><b id="invLabor">$0.00</b>
+        <span>Other charges <span id="invOtherNote" class="hint" style="display:inline"></span></span><b id="invOther">$0.00</b>
+        <span id="invTaxLabel">Sales tax on parts</span><b id="invTax">$0.00</b>
+        <span class="big">Invoice total</span><b class="big" id="invTotal">$0.00</b>
+        <span>Deposit</span><b id="invDeposit">$0.00</b>
+        <span class="due big">Balance due</span><b class="big due" id="invBalance">$0.00</b>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Photos <span class="sub">kept with the job</span></h2>
+      <div class="btnrow">
+        <span class="btn filebtn">Take photo<input type="file" id="photoCam" accept="image/*" capture="environment" aria-label="Take a photo of the machine"></span>
+        <span class="btn filebtn">Add from library<input type="file" id="photoLib" accept="image/*" multiple aria-label="Add photos from the library"></span>
+        <span class="note">Up to 6. A shot of the whole machine as it arrived is the one worth having.</span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+    </form>
+
+    <div class="actionbar" id="actionbar">
+      <div class="inner">
+        <button type="button" class="btn sq" id="btnPrint" title="Repair Order / Invoice">Print</button>
+        <button type="button" class="btn sq" id="btnMessage" title="Message to customer">Text</button>
+        <button type="button" class="btn primary" id="btnSave">Save job</button>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= PARTS (job parts + shop stock) ================= -->
+<section id="view-stock" role="tabpanel" aria-labelledby="tab-stock" hidden>
+<div class="segrow" id="partsSeg">
+  <button type="button" class="segbtn" data-seg="orders" aria-pressed="true">Job parts <span class="count" id="ordersCount"></span></button>
+  <button type="button" class="segbtn" data-seg="shelf" aria-pressed="false">Shop stock <span class="count" id="shelfCount"></span></button>
+</div>
+<div id="ordersView">
+  <div class="list-pane" style="position:static;max-height:none">
+    <div class="toolbar"><input id="ordersSearch" placeholder="Search part, customer, R.O., supplier…" aria-label="Search part lines"></div>
+    <div class="filters" id="ordersFilters">
+      <button type="button" class="chip" data-f="needed" aria-pressed="true">To order</button>
+      <button type="button" class="chip" data-f="onorder" aria-pressed="false">On order</button>
+      <button type="button" class="chip" data-f="received" aria-pressed="false">Received, not installed</button>
+      <button type="button" class="chip" data-f="all" aria-pressed="false">All lines</button>
+    </div>
+  </div>
+  <div id="ordersList"></div>
+  <p class="note" style="margin:12px 0 0">Add a part from inside its job. Write it down as <b>Needed</b> at diagnosis; when you place the order, tap <b>Order these</b> on the supplier group and enter the order number once for every line in it. Tap <b>Received</b> as boxes arrive.</p>
+</div>
+<div id="shelfView" hidden>
+<div class="stock-layout">
+  <div class="sec">
+    <h2>Shop Stock <span class="sub">on the shelf now</span></h2>
+    <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:12px">
+      <div class="tile" id="tileReorder"><div class="v">0</div><div class="k">to reorder</div></div>
+      <div class="tile"><div class="v" id="tileOnOrder">0</div><div class="k">on order</div></div>
+      <div class="tile"><div class="v" id="tileShelfValue">$0</div><div class="k">shelf value at cost</div></div>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" id="stockSummary"></table></div>
+    <p class="note" style="margin:10px 0 0">Nothing to type here: it builds itself from the restock lines. Received adds to the shelf; a part used on a job with supplier <b>Shop Stock</b> comes off it.</p>
+  </div>
+  <div class="sec">
+    <h2>Restock lines <span class="sub">everything bought for the shelf</span></h2>
+    <div class="btnrow" style="margin-bottom:10px">
+      <input id="stockSearch" placeholder="Search part #, description, supplier…" aria-label="Search restock lines" style="flex:1;min-width:140px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:10px">
+      <button type="button" class="btn primary" id="btnAddStock">+ Restock</button>
+    </div>
+    <div class="lines" id="stockLines"></div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- ================= DASHBOARD ================= -->
+<section id="view-dash" role="tabpanel" aria-labelledby="tab-dash" hidden>
+<div class="dash-grid">
+  <div class="sec wide">
+    <h2>At a glance <span class="sub" id="dashAsOf"></span></h2>
+    <div class="tiles" id="tiles"></div>
+  </div>
+  <div class="sec"><h2>Waiting on parts — by job</h2><div id="dashWaiting"></div></div>
+  <div class="sec"><h2>Ready for pickup — call the customer</h2><div id="dashReady"></div></div>
+  <div class="sec wide">
+    <h2>Sales &amp; tax <span class="sub">by the day you were paid (Date Picked Up / Paid)</span>
+      <select id="taxYear" aria-label="Year" style="font:600 14px var(--font-body);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2)"></select></h2>
+    <div class="tbl-wrap"><table class="tbl" id="taxTable"></table></div>
+    <div class="kv" id="taxChecks" style="margin-top:12px"></div>
+    <p class="note" style="margin:10px 0 0">Taxable sales are <b>Parts</b>; labor and other charges are stated separately on every invoice. <b>Sales tax</b> is what you remit. Verify the county rate at dor.sc.gov or with your accountant.</p>
+  </div>
+</div>
+</section>
+
+<!-- ================= SETUP ================= -->
+<section id="view-setup" role="tabpanel" aria-labelledby="tab-setup" hidden>
+  <div class="dash-grid">
+  <div class="sec">
+    <h2>Shop <span class="sub">prints on every Repair Order</span></h2>
+    <div class="grid">
+      <div class="f half"><label for="setShop">Business name</label><input id="setShop" autocomplete="off"></div>
+      <div class="f half"><label for="setTag">Tagline</label><input id="setTag" autocomplete="off"></div>
+      <div class="f half"><label for="setCity">City / State</label><input id="setCity" autocomplete="off"></div>
+      <div class="f"><label for="setPhone">Phone</label><input id="setPhone" type="tel" autocomplete="off"></div>
+      <div class="f"><label for="setEmail">Email <span class="opt">(optional)</span></label><input id="setEmail" type="email" autocomplete="off" autocapitalize="off"></div>
+      <div class="f"><label for="setTax">Sales tax on parts %</label><input id="setTax" class="money" type="number" step="0.1" inputmode="decimal"></div>
+      <div class="f"><label for="setFee">Default diagnostic fee $</label><input id="setFee" class="money" type="number" step="1" inputmode="decimal"></div>
+      <div class="f"><label for="setStorage">Storage fee per day $</label><input id="setStorage" class="money" type="number" step="1" inputmode="decimal"></div>
+      <div class="f"><label for="setGrace">Storage grace <span class="opt">(days after notice)</span></label><input id="setGrace" class="money" type="number" step="1" inputmode="numeric"></div>
+      <div class="f"><label for="setAbandon">Abandonment <span class="opt">(days after notice)</span></label><input id="setAbandon" class="money" type="number" step="1" inputmode="numeric"></div>
+      <div class="f"><label for="setFuel">Fuel disposal fee $</label><input id="setFuel" class="money" type="number" step="1" inputmode="decimal"></div>
+      <div class="f"><label for="setReturned">Returned payment fee $</label><input id="setReturned" class="money" type="number" step="1" inputmode="decimal"></div>
+      <div class="f"><label for="setWarranty">Labor warranty <span class="opt">(days)</span></label><input id="setWarranty" class="money" type="number" step="1" inputmode="numeric"></div>
+    </div>
+    <p class="note" style="margin:10px 0 0">These feed the terms on the printed Repair Order, the same way the workbook's Settings tab did.</p>
+  </div>
+
+  <div class="sec">
+    <h2>Backup &amp; export</h2>
+    <p class="note" style="margin:0 0 10px"><b>Everything lives on this device.</b> Back up once a week; keep the file in Google Drive, iCloud Drive or OneDrive, in a folder shared with whoever else should have a copy. Restoring a backup on another device brings everything across, photos included.</p>
+    <div class="btnrow">
+      <button type="button" class="btn primary" id="btnBackup">Back up everything</button>
+      <span class="btn filebtn">Restore from backup<input type="file" id="restoreFile" accept=".json,application/json" aria-label="Restore from a backup file"></span>
+    </div>
+    <div class="kv" style="margin-top:12px"><span class="k">Jobs</span><span id="storJobs">0</span><span class="k">Parts lines</span><span id="storParts">0</span><span class="k">Restock lines</span><span id="storStock">0</span><span class="k">Photos</span><span id="storPhotos">0</span><span class="k">Last saved</span><span id="storLast">—</span><span class="k">Last backup</span><span id="storBackup">never</span></div>
+    <h2 style="margin-top:16px">For the workbook <span class="sub">CSV in the tracker's column order</span></h2>
+    <div class="btnrow">
+      <button type="button" class="btn sm" id="btnExportRO">Repair Orders</button>
+      <button type="button" class="btn sm" id="btnExportParts">Parts Orders</button>
+      <button type="button" class="btn sm" id="btnExportStock">Stock Orders</button>
+    </div>
+    <p class="note" style="margin:8px 0 0">Open the CSV, copy the rows, paste into column A of the matching tab. Gray columns come across as values.</p>
+  </div>
+
+  <div class="sec" id="syncSec">
+    <h2>Sync between devices <span class="sub" id="syncStatus">off</span></h2>
+    <div id="syncOff">
+      <p class="note" style="margin:0 0 10px">Off, each device keeps its own records. On, every job, part line, restock line and setting appears on every device that holds the same <b>sync key</b>, usually within a second, and catches up after being offline. Photos stay on the device that took them.</p>
+      <div class="f"><label for="syncKeyIn">Sync key from the first device</label><textarea id="syncKeyIn" class="mono" style="min-height:70px;text-transform:none" placeholder="BST1.…" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></div>
+      <div class="btnrow" style="margin-top:8px"><button type="button" class="btn primary" id="btnSyncConnect">Connect</button><button type="button" class="btn" id="btnSyncCreate">First device? Create the key</button></div>
+      <div id="syncCreate" hidden style="margin-top:14px">
+        <p class="note" style="margin:0 0 8px"><b>One-time setup (about ten minutes, done once for the shop):</b> the records are kept in a free Google Firebase database that only this key unlocks.</p>
+        <ol class="steps">
+          <li>Go to <b>console.firebase.google.com</b>, sign in with a Google account, <b>Add project</b>. Name it "Bond Shop Tracker"; turn Google Analytics off.</li>
+          <li><b>Build ▸ Firestore Database ▸ Create database</b>. Location: <b>us-east1</b> (South Carolina). Start in <b>production mode</b>.</li>
+          <li>On the database's <b>Rules</b> tab, replace everything with the rules below and <b>Publish</b>.</li>
+          <li><b>Build ▸ Authentication ▸ Get started ▸ Sign-in method ▸ Anonymous ▸ Enable</b>.</li>
+          <li><b>Project Overview ▸ Add app ▸ Web (&lt;/&gt;)</b>. Nickname "Shop Tracker", Register. Copy the <b>firebaseConfig</b> block it shows and paste it below.</li>
+        </ol>
+        <div class="btnrow" style="justify-content:space-between;margin-top:10px"><b>Firestore rules</b><button type="button" class="btn sm" id="btnCopyRules">Copy rules</button></div>
+<pre class="prompt" id="rulesText">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /shops/{shop}/{document=**} {
+      allow read, write: if request.auth != null &amp;&amp; shop.size() >= 20;
+    }
+  }
+}</pre>
+        <div class="f"><label for="fbConfigIn">firebaseConfig from the Firebase console</label><textarea id="fbConfigIn" class="mono" style="min-height:110px;text-transform:none" placeholder="const firebaseConfig = { apiKey: &quot;…&quot;, projectId: &quot;…&quot;, … };" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></div>
+        <div class="btnrow" style="margin-top:8px"><button type="button" class="btn primary" id="btnSyncGenerate">Create key and connect</button></div>
+      </div>
+    </div>
+    <div id="syncOn" hidden>
+      <p class="note" style="margin:0 0 10px">Connected to project <b id="syncProject"></b>. To add a device, copy this key and paste it into Setup ▸ Sync on that device. Anyone holding the key can read and change the shop's records, so send it by text message or AirDrop, not by posting it anywhere.</p>
+      <div class="f"><label for="syncKeyOut">Sync key</label><textarea id="syncKeyOut" class="mono" style="min-height:70px;text-transform:none" readonly></textarea></div>
+      <div class="btnrow" style="margin-top:8px"><button type="button" class="btn primary" id="btnSyncCopy">Copy key</button><button type="button" class="btn danger" id="btnSyncOff">Turn off sync on this device</button></div>
+      <p class="note" id="syncLast" style="margin:10px 0 0"></p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Install on each device <span class="sub">phone, tablet or computer</span></h2>
+    <p class="note" style="margin:0 0 10px">Open this address in the device's own browser, install it, then open it from the icon from then on. Records belong to the installed copy, not to a browser tab. Everything works without a signal after the first open.</p>
+    <div class="kv" id="installRows" style="gap:10px 12px">
+      <span class="k" data-plat="ios">iPhone / iPad</span><span data-plat="ios"><b>Safari</b> ▸ Share ▸ <b>Add to Home Screen</b>. Reading labels: tap a scan box, choose <b>Scan Text</b>.</span>
+      <span class="k" data-plat="android">Android</span><span data-plat="android"><b>Chrome</b> ▸ ⋮ ▸ <b>Install app</b> (or Add to Home screen). Reading labels: Camera ▸ <b>Google Lens</b> ▸ select the text ▸ Copy, then paste into a scan box.</span>
+      <span class="k" data-plat="desktop">Windows / Mac</span><span data-plat="desktop"><b>Chrome</b>: install icon at the right of the address bar. <b>Edge</b>: ⋯ ▸ Apps ▸ Install this site as an app. <b>Safari</b> (Mac): File ▸ Add to Dock. Two-pane layout, prints to your printer.</span>
+    </div>
+    <p class="note" style="margin:10px 0 0">Printing: in a job, tap <b>Print</b>. Repair Order at intake (page 1, signed), Invoice at pickup (page 2). The device's print dialog offers printers and Save as PDF.</p>
+    <p class="note" id="hostNote" style="margin:10px 0 0"></p>
+  </div>
+
+  <details class="sec" id="shortcutSec">
+    <summary><h2>Optional: Apple Intelligence shortcut <span class="sub">iPhone 15 Pro / 16 or newer · M-series or mini A17 Pro iPad</span></h2><span class="chev">▾</span></summary>
+    <p class="note" style="margin:0 0 10px">Apple devices only. Build it once in the Shortcuts app: two label photos in, the text sorted into fields by Apple's on-device model, result on the clipboard. Paste into the Equipment scan box. Without it, Scan Text plus this app's own sorting does the same job.</p>
+    <ol class="steps">
+      <li><b>Take Photo</b> — Show Camera Preview on; Number of Photos 2 (equipment label, then engine label).</li>
+      <li><b>Extract Text from Image</b> — input: Photos.</li>
+      <li><b>Combine Text</b> — Custom separator: three dashes <code>---</code>.</li>
+      <li><b>Use Model</b> — On-Device (Cloud if it misfiles). Paste the prompt below, then the Combined Text variable at the end. Output: Dictionary.</li>
+      <li><b>Text</b> — insert the Use Model result.</li>
+      <li><b>Copy to Clipboard</b> — input: the Text.</li>
+      <li><b>Open URLs</b> — this app's address. Add the shortcut to the home screen next to the app.</li>
+    </ol>
+    <p class="note" style="margin:10px 0 0">On Android and computers, skip this: Google Lens or any copied text plus the app's own sorting does the same job.</p>
+    <div class="btnrow" style="justify-content:space-between;margin-top:10px"><b>Prompt for Use Model</b><button type="button" class="btn sm" id="btnCopyPrompt">Copy prompt</button></div>
+<pre class="prompt" id="promptText">You are reading text copied from the identification labels on a piece of outdoor power equipment (mower, generator, chainsaw, pressure washer, welder, ATV) and from its engine. The equipment label text comes first, then a line of dashes, then the engine label text.
+
+Return ONLY a JSON object with exactly these keys: make, model, serial, date_of_manufacture, hours, engine_make, engine_model, engine_serial.
+
+Rules:
+- make is the equipment brand (for example Cub Cadet, John Deere, Troy-Bilt, Generac, Stihl).
+- model is the equipment model number (the value after MODEL, MODEL NO or M/N).
+- serial is the equipment serial number: the value after SERIAL, SERIAL NO, S/N, PIN or VIN.
+- date_of_manufacture is the value after MFG DATE or similar, if present.
+- engine_make is the engine brand (Briggs &amp; Stratton, Kohler, Kawasaki, Honda, and so on).
+- engine_model is the engine model plus any SPEC, TYPE or CODE values, separated by spaces.
+- engine_serial is the engine's serial number.
+- Copy characters exactly as written. Never guess, correct or complete a number.
+- Use "" for anything that is not present.
+- No explanation and no markdown. Output the JSON object only.
+
+Label text:</pre>
+  </details>
+
+  <div class="sec">
+    <h2>Danger zone</h2>
+    <button type="button" class="btn sm danger" id="btnWipe">Delete everything on this device</button>
+    <p class="note" style="margin:8px 0 0">Back up first. This removes every job, part line, restock line and photo from this device.</p>
+  </div>
+  </div>
+</section>
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="sheetHost"></div>
+<div id="printView" aria-label="Print preview">
+  <div class="bar"><span class="msg" id="printMsg"></span><button type="button" class="btn sm" id="btnDoPrint" style="background:#fff;color:#111">Print / Save PDF</button><button type="button" class="btn sm" id="btnClosePrint" style="background:transparent;color:#fff;border-color:#9CA3AF">Close</button></div>
+  <div id="printPages"></div>
+</div>
+
+<script>
+// Label parser — turns OCR text from an equipment or engine label into fields.
+// Pure functions, no DOM. Inlined into the page; also run under node for tests.
+const LabelParser = (() => {
+  const EQUIP_BRANDS = ['Cub Cadet','John Deere','Troy-Bilt','Husqvarna','Toro','Craftsman','Ariens','Snapper','Exmark','Gravely','Scag','Bad Boy','Stihl','Echo','Poulan Pro','Poulan','Ryobi','Generac','Champion','Westinghouse','Predator','DeWalt','Miller','Lincoln Electric','Hobart','Simplicity','Murray','MTD','Yard Machines','Yard-Man','Bolens','Kubota','Dixie Chopper','Ferris','Hustler','Swisher','Billy Goat','Little Wonder','RedMax','Shindaiwa','Makita','Tanaka','Polaris','Can-Am','Arctic Cat','Suzuki','Harley-Davidson','Indian','Black Max','Greenworks','EGO','Weed Eater','Homelite','McCulloch','Jonsered','Dolmar','Firman','DuroMax','Pulsar','WEN','Karcher','Simpson','Sun Joe','Powerstroke','Honda','Kawasaki','Yamaha','Kohler','Briggs & Stratton','Tecumseh','Subaru','Robin','Kioti','Mahindra','Bobcat','Wright','Walker','Worx','Milwaukee','Lawn-Boy','Dixon','Columbia','White Outdoor','Remington','Troy Bilt','Huskee','Massey Ferguson','New Holland','Case','Cat','Caterpillar','Ryobi','Hyundai','A-iPower','Sportsman','Powermate','Coleman','Briggs'];
+  const ENGINE_BRANDS = ['Briggs & Stratton','Briggs','Vanguard','Kohler','Kawasaki','Honda','Tecumseh','Loncin','Zongshen','Robin','Subaru','LCT','Yamaha','Predator','Champion','Generac','Kubota','Yanmar','Lifan','Ducar','Powermore','Intek','Lauson','Onan','Wisconsin','Clinton','Mitsubishi','Hatz','Chonda'];
+  const CANON = { 'briggs':'Briggs & Stratton','troy bilt':'Troy-Bilt','cat':'Caterpillar','karcher':'Kärcher' };
+
+  function brandRegex(name) {
+    // "Briggs & Stratton" -> matches BRIGGS & STRATTON, BRIGGS AND STRATTON, BRIGGS&STRATTON
+    const parts = name.split(/[\s\-]+/).map(p => p === '&' ? '(?:&|AND|\\+)' : p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return new RegExp('(?<![A-Z0-9])' + parts.join('[\\s\\-]*') + '(?![A-Z0-9])', 'i');
+  }
+  const EQ_RX = EQUIP_BRANDS.map(b => [b, brandRegex(b)]);
+  const EN_RX = ENGINE_BRANDS.map(b => [b, brandRegex(b)]);
+
+  function findBrand(text, list) {
+    let best = null;
+    for (const [name, rx] of list) {
+      const m = rx.exec(text);
+      if (m && (best === null || m.index < best.index || (m.index === best.index && name.length > best.name.length))) best = { name, index: m.index };
+    }
+    if (!best) return '';
+    const key = best.name.toLowerCase();
+    return CANON[key] || best.name;
+  }
+
+  const RESERVED = /^(?:MODEL|TYPE|CODE|SERIAL|SPEC|SPECIFICATION|FAMILY|NO|NUM|NUMBER|DATE|MFG|CO|INC|LTD|LLC|COMPANY|CORP|ENGINE|PRODUCT)$/i;
+  const clean = s => (s || '').replace(/^[\s:.#№\-–—]+|[\s:.,;]+$/g, '').trim();
+  const TOKEN = '([A-Z0-9][A-Z0-9\\-\\/\\.]*[A-Z0-9]|[A-Z0-9])';
+
+  // Value after a keyword: same line first; if the line ends after the keyword, first token of the next non-empty line.
+  function after(lines, keyRx, { allowSpaces = false, minLen = 2 } = {}) {
+    for (let i = 0; i < lines.length; i++) {
+      const m = keyRx.exec(lines[i]);
+      if (!m) continue;
+      let rest = lines[i].slice(m.index + m[0].length);
+      rest = rest.replace(/^[\s:.#№\-–—=]+/, '');
+      if (!rest.trim()) {
+        for (let j = i + 1; j < lines.length; j++) { if (lines[j].trim()) { rest = lines[j].trim(); break; } }
+      }
+      const vm = new RegExp('^' + (allowSpaces ? '([A-Z0-9][A-Z0-9\\-\\/\\. ]*[A-Z0-9])' : TOKEN), 'i').exec(rest);
+      if (vm) { const v = clean(vm[1]); if (v.length >= minLen && !RESERVED.test(v)) return v; }
+    }
+    return '';
+  }
+
+  const KEYS = {
+    serial: /\b(?:SERIAL\s*(?:NO|NUM|NUMBER|#)?|SER\.?\s*(?:NO|#)?|S\/N|SN|PIN|P\.I\.N\.|VIN|ENGINE\s*(?:NO|NUMBER|#)|E\/NO|FRAME\s*(?:NO|#)?)\b/i,
+    model:  /\b(?:MODEL\s*(?:NO|NUM|NUMBER|#)?|MOD\.?|M\/N|MDL|PRODUCT\s*(?:NO|#)|CAT(?:ALOG)?\.?\s*(?:NO|#))\b/i,
+    spec:   /\bSPEC(?:IFICATION)?\.?\s*(?:NO|#)?\b/i,
+    type:   /\bTYPE\b/i,
+    code:   /\bCODE\b/i,
+    family: /\bFAMILY\b/i,
+    dom:    /\b(?:MFG\.?\s*(?:DATE|DT)?|MFD\.?|DATE\s*OF\s*MANUFACTURE|MANUFACTURED(?:\s*ON)?|BUILD\s*DATE|PROD(?:UCTION)?\.?\s*DATE|DOM)\b/i,
+  };
+
+  function monthYear(s) {
+    // normalize 03/24, 03/2024, 2024-03, MAR 2024, 032024 -> MM/YYYY ; leave full dates alone
+    s = clean(s);
+    let m;
+    if ((m = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/.exec(s))) return s;           // full date, keep
+    if ((m = /^(\d{1,2})[\/\-.](\d{2,4})$/.exec(s))) { let y = m[2]; if (y.length === 2) y = '20' + y; return m[1].padStart(2, '0') + '/' + y; }
+    if ((m = /^(\d{4})[\/\-.](\d{1,2})$/.exec(s))) return m[2].padStart(2, '0') + '/' + m[1];
+    if ((m = /^([A-Z]{3,9})\.?\s*(\d{4})$/i.exec(s))) return m[1][0].toUpperCase() + m[1].slice(1, 3).toLowerCase() + ' ' + m[2];
+    if ((m = /^(\d{4})$/.exec(s)) && +m[1] > 1980 && +m[1] < 2100) return m[1];
+    return s;
+  }
+
+  function parse(text, hint) {
+    text = (text || '').replace(/\r/g, '');
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const up = text.toUpperCase();
+    const out = { make: '', model: '', serial: '', spec: '', type: '', code: '', dom: '', hours: '', equipType: '' };
+    const isEngine = hint === 'engine';
+
+    out.make = findBrand(text, isEngine ? EN_RX : EQ_RX);
+    if (!isEngine && !out.make) out.make = findBrand(text, EN_RX);   // an engine brand on an equipment label is still a brand
+
+    // Briggs & Stratton "MODEL TYPE CODE" triple on one line (often under a header line of those three words)
+    let bm;
+    for (const l of lines) {
+      if ((bm = /^(\d{2}[A-Z0-9]{3,4})\s+(\d{4})\s*([A-Z]\d)?\s+([A-Z0-9]{6,10})\b/.exec(l.toUpperCase()))) {
+        out.model = bm[1]; out.type = bm[2] + (bm[3] ? ' ' + bm[3] : ''); out.code = bm[4]; break;
+      }
+    }
+    if (!out.serial) out.serial = after(lines, KEYS.serial, { minLen: 4 });
+    if (!out.model)  out.model  = after(lines, KEYS.model);
+    out.spec   = after(lines, KEYS.spec);
+    if (!out.code) out.code = after(lines, KEYS.code);
+    // TYPE: Briggs uses it as a number; ignore "TYPE" when it introduces words (e.g. "ENGINE TYPE: 4-STROKE")
+    if (!out.type) { const t = after(lines, KEYS.type, { allowSpaces: true }); if (t && /^\d{4}(\s+[A-Z]\d)?$/i.test(t)) out.type = t; else if (t && /\d/.test(t) && !/STROKE|CYCLE/i.test(t)) out.type = t.split(' ')[0]; }
+    const d = after(lines, KEYS.dom, { allowSpaces: true }); if (d && /\d/.test(d)) out.dom = monthYear(d);
+    if (out.code && !out.dom && /^\d{6}/.test(out.code)) {             // Briggs code starts YYMMDD
+      const yy = out.code.slice(0, 2), mm = out.code.slice(2, 4), dd = out.code.slice(4, 6);
+      if (+mm >= 1 && +mm <= 12 && +dd >= 1 && +dd <= 31) out.dom = mm + '/20' + yy;
+    }
+
+    // Honda engines: model GX390 / GCV160 / GC190, serial GCAAK-1234567
+    if (!out.model) { const hm = /\b(G[XCPS]V?\d{2,3}[A-Z0-9]{0,3})\b/.exec(up); if (hm && /HONDA/.test(up)) out.model = hm[1]; }
+    if (!out.serial) { const hs = /\b(G[A-Z]{3,4}-\d{6,8})\b/.exec(up); if (hs) out.serial = hs[1]; }
+    if (!out.model) { const sm = /\b((?:MS|FS|BR|HS|BG|HT|KM|FC|FSA|MSA|BGA|HSA|TS)\s?\d{2,3}\s?[A-Z\-]{0,4})\b/.exec(up); if (sm && /STIHL/.test(up)) out.model = sm[1].replace(/\s+/g, ' ').trim(); }
+    // Kohler model like CV742 / SV620 / KT745 / CH440 ; Kawasaki like FR691V / FX730V / FS600V
+    if (!out.model) { const km = /\b((?:CV|SV|KT|CH|XT|ECV|ZT|CS|SH|KS|K)\d{2,3}[A-Z]?|F[RSXJHDCB]\d{3}[A-Z]?)\b/.exec(up); if (km && /KOHLER|KAWASAKI/.test(up)) out.model = km[1]; }
+
+    // tokens for fallbacks
+    const tokens = up.replace(/[^A-Z0-9\-\/\n ]/g, ' ').split(/\s+/).filter(Boolean);
+    const noise = new Set(['MODEL','SERIAL','TYPE','CODE','SPEC','FAMILY','MADE','USA','CHINA','WARNING','CAUTION','DANGER','MFG','DATE','ENGINE','HP','CC','KW','RPM','VOLTS','AMPS','WATTS','PSI','GPM','OHV','EPA','CARB','CERTIFIED','DISP','PART','NO','NUMBER','REF','UPC','EAN','PATENT','PATENTS','MAX','MIN','LBS','KG','OIL','GAS','FUEL','ONLY','UNLEADED']);
+    const used = new Set([out.model, out.serial, out.spec, out.code, out.type].filter(Boolean).map(s => s.toUpperCase()));
+    const phone = /^\d{3}-\d{3}-\d{4}$/;
+    const cands = tokens.filter(tk => !noise.has(tk) && !used.has(tk) && !phone.test(tk) && !/\./.test(tk) && /\d/.test(tk) && tk.length >= 4);
+
+    if (!out.serial) {
+      // longest token with letters+digits or pure digits >= 8, not looking like a model
+      const s = cands.filter(tk => tk.length >= 8 && (tk.replace(/\D/g, '').length >= 4)).sort((a, b) => b.length - a.length)[0];
+      if (s) out.serial = s;
+    }
+    if (!out.model) {
+      const m = cands.filter(tk => tk !== out.serial.toUpperCase() && /[A-Z]/.test(tk) && /\d/.test(tk) && tk.length >= 4 && tk.length <= 14)[0];
+      if (m) out.model = m;
+    }
+
+    // Hours from an hour meter photo
+    const hm = /\b(\d{1,5}(?:[.,]\d)?)\s*(?:HRS?|HOURS)\b/i.exec(text); if (hm) out.hours = hm[1];
+
+    // Equipment type guess
+    const T = [[/ZERO[\s\-]*TURN|\bZTR\b|ZTRAK|Z[\s\-]TURN|Z[\s\-]?FORCE|RZT|TIMECUTTER/, 'Zero-Turn'], [/RIDING|LAWN\s*TRACTOR|GARDEN\s*TRACTOR|\bTRACTOR\b/, 'Riding Mower'], [/PUSH\s*MOWER|WALK[\s\-]*BEHIND|SELF[\s\-]*PROPELLED/, 'Push Mower'], [/CHAIN\s*SAW/, 'Chainsaw'], [/TRIMMER|BLOWER|EDGER|BRUSH\s*CUTTER/, 'Trimmer / Blower'], [/WELDER|WELDING|BOBCAT\s*2\d{2}|TRAILBLAZER|RANGER\s*\d{3}/, 'Welder'], [/PRESSURE\s*WASHER|\bPSI\b/, 'Pressure Washer'], [/GENERATOR|\bWATTS?\b|\bKW\b|INVERTER/, 'Generator'], [/\bUTV\b|SIDE[\s\-]*BY[\s\-]*SIDE|RANGER|RZR|MAVERICK|DEFENDER/, 'UTV / Side-by-side'], [/\bATV\b|SPORTSMAN|FOURTRAX|OUTLANDER/, 'ATV'], [/MOTORCYCLE/, 'Motorcycle']];
+    if (!isEngine) for (const [rx, name] of T) if (rx.test(up)) { out.equipType = name; break; }
+
+    // Equipment label: keep spec/type/code out of the way unless it is an engine label
+    return out;
+  }
+
+  // Engine model text for the workbook's single Engine column: model + spec/type/code
+  function engineModelText(p) {
+    const bits = [];
+    if (p.model) bits.push(p.model);
+    if (p.spec) bits.push('Spec ' + p.spec);
+    if (p.type) bits.push('Type ' + p.type);
+    if (p.code) bits.push('Code ' + p.code);
+    return bits.join(' ');
+  }
+
+  // Try to read a JSON object (from the Shortcut) out of pasted text. Returns null if none.
+  function parseJSON(text) {
+    const m = /\{[\s\S]*\}/.exec(text || ''); if (!m) return null;
+    let obj; try { obj = JSON.parse(m[0]); } catch (e) { return null; }
+    if (!obj || typeof obj !== 'object') return null;
+    const norm = {};
+    for (const k of Object.keys(obj)) {
+      const nk = k.toLowerCase().replace(/[^a-z]/g, '');
+      const v = obj[k] == null ? '' : String(obj[k]).trim();
+      if (['make','brand','manufacturer','equipmentmake'].includes(nk)) norm.make = v;
+      else if (['model','modelno','modelnumber','equipmentmodel'].includes(nk)) norm.model = v;
+      else if (['serial','serialno','serialnumber','serialvin','sn','vin','pin'].includes(nk)) norm.serial = v;
+      else if (['dateofmanufacture','dom','mfgdate','manufacturedate','mfg'].includes(nk)) norm.dom = v;
+      else if (['hours','hoursmiles','hourmeter','miles'].includes(nk)) norm.hours = v;
+      else if (['enginemake','enginebrand','motormake','motorbrand'].includes(nk)) norm.engineMake = v;
+      else if (['enginemodel','enginespec','enginemodelspec','motormodel','enginetype'].includes(nk)) norm.engineModel = v;
+      else if (['engineserial','engineserialno','engineserialnumber','motorserial','engineno'].includes(nk)) norm.engineSerial = v;
+      else if (['equipmenttype','type','category'].includes(nk)) norm.equipType = v;
+    }
+    return Object.keys(norm).length ? norm : null;
+  }
+
+  return { parse, parseJSON, engineModelText };
+})();
+
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const IN_CLAUDE = !!window.claude || /(^|\.)claude\.ai$/.test(location.hostname);
+  const SELF_HOSTED = !IN_CLAUDE && /^https?:$/.test(location.protocol);
+  const UA = navigator.userAgent || '';
+  const PLATFORM = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(UA) ? 'android' : 'desktop';
+  function platformHints() {
+    const how = { ios: 'tap the box, choose <b>Scan Text</b> and point the camera at the plate (or <b>Paste</b> after the Apple Intelligence shortcut).',
+                  android: 'open the Camera, switch to <b>Google Lens</b>, select the text on the plate, <b>Copy</b>, then paste it here.',
+                  desktop: 'paste the label text here (from a photo opened in your photo app, or typed from the plate).' }[PLATFORM];
+    $('howEquip').innerHTML = '<b>Scan the equipment label:</b> ' + how; $('howEngine').innerHTML = '<b>Scan the engine label</b> the same way.';
+    document.querySelectorAll('#installRows [data-plat]').forEach(el => { const mine = el.dataset.plat === PLATFORM; el.style.fontWeight = mine && el.classList.contains('k') ? '700' : ''; if (mine && el.classList.contains('k')) el.innerHTML += ' <span class="pill done" style="margin-left:4px">this device</span>'; });
+    $('shortcutSec').open = false;
+  }
+
+  // ======================================================================
+  // Settings (localStorage; included in backups)
+  // ======================================================================
+  const DEF_SETTINGS = { shop: 'Bond Small Engine Repair and Services, LLC', tag: 'Small Engines. Big Problems. Fixed.', city: 'Central, South Carolina', phone: '864-765-1916', email: '',
+    tax: 7, fee: 45, storage: 10, grace: 7, abandon: 30, fuel: 15, returned: 35, warranty: 30, lastBackup: '' };
+  const SETTING_FIELDS = [['setShop', 'shop', 's'], ['setTag', 'tag', 's'], ['setCity', 'city', 's'], ['setPhone', 'phone', 's'], ['setEmail', 'email', 's'], ['setTax', 'tax', 'n'], ['setFee', 'fee', 'n'], ['setStorage', 'storage', 'n'], ['setGrace', 'grace', 'n'], ['setAbandon', 'abandon', 'n'], ['setFuel', 'fuel', 'n'], ['setReturned', 'returned', 'n'], ['setWarranty', 'warranty', 'n']];
+  let settings = { ...DEF_SETTINGS };
+  function loadSettings() { try { settings = { ...DEF_SETTINGS, ...JSON.parse(localStorage.getItem('shop-intake-settings') || '{}') }; } catch (e) {} }
+  function saveSettings() { try { localStorage.setItem('shop-intake-settings', JSON.stringify(settings)); } catch (e) {} }
+  function applySettings() {
+    const short = (settings.shop || '').replace(/\s*(Repair and Services|Repair & Services|Repair)?,?\s*(LLC|Inc\.?)\s*$/i, '').trim() || 'Shop';
+    $('shopName').textContent = short; $('shopTag').textContent = settings.tag || 'Shop tracker';
+    for (const [id, key] of SETTING_FIELDS) $(id).value = settings[key] ?? '';
+    $('taxRate').placeholder = settings.tax;
+    updateEst(); updateInvoice();
+  }
+  for (const [id, key, kind] of SETTING_FIELDS) $(id).addEventListener('change', () => { settings[key] = kind === 'n' ? (+$(id).value || 0) : $(id).value.trim(); settings.updated = new Date().toISOString(); saveSettings(); applySettings(); Sync.pushSettings(); });
+
+  // ======================================================================
+  // Storage: IndexedDB (jobs, parts, stock) with a localStorage fallback
+  // ======================================================================
+  const STORES = ['jobs', 'parts', 'stock'];
+  const Store = (() => {
+    let dbp = null, useLS = false;
+    function open() {
+      if (dbp) return dbp;
+      dbp = new Promise((res, rej) => {
+        try {
+          const r = indexedDB.open('shop-intake', 2);
+          r.onupgradeneeded = () => { const db = r.result; for (const s of STORES) if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' }); };
+          r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+        } catch (e) { rej(e); }
+      });
+      return dbp;
+    }
+    function tx(store, mode, fn) {
+      return open().then(db => new Promise((res, rej) => {
+        const t = db.transaction(store, mode); const st = t.objectStore(store); const rq = fn(st);
+        t.oncomplete = () => res(rq && rq.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      }));
+    }
+    const lsKey = s => 'shop-intake-' + s;
+    const lsAll = s => { try { return JSON.parse(localStorage.getItem(lsKey(s)) || '[]'); } catch (e) { return []; } };
+    const lsSave = (s, arr) => { try { localStorage.setItem(lsKey(s), JSON.stringify(s === 'jobs' ? arr.map(j => ({ ...j, photos: [], signature: '' })) : arr)); return true; } catch (e) { return false; } };
+    async function guard(fn, fallback) { if (useLS) return fallback(); try { return await fn(); } catch (e) { useLS = true; return fallback(); } }
+    return {
+      all: s => guard(() => tx(s, 'readonly', st => st.getAll()).then(r => r || []), () => lsAll(s)),
+      put: (s, o) => guard(() => tx(s, 'readwrite', st => st.put(o)).then(() => true), () => lsSave(s, [...lsAll(s).filter(x => x.id !== o.id), o])),
+      putMany: (s, arr) => guard(() => tx(s, 'readwrite', st => { arr.forEach(o => st.put(o)); }).then(() => true), () => { const ids = new Set(arr.map(o => o.id)); return lsSave(s, [...lsAll(s).filter(x => !ids.has(x.id)), ...arr]); }),
+      del: (s, id) => guard(() => tx(s, 'readwrite', st => st.delete(id)).then(() => true), () => lsSave(s, lsAll(s).filter(x => x.id !== id))),
+      delMany: (s, ids) => guard(() => tx(s, 'readwrite', st => { ids.forEach(id => st.delete(id)); }).then(() => true), () => { const set = new Set(ids); return lsSave(s, lsAll(s).filter(x => !set.has(x.id))); }),
+      clear: s => guard(() => tx(s, 'readwrite', st => st.clear()).then(() => true), () => lsSave(s, [])),
+      get fallback() { return useLS; }
+    };
+  })();
+
+  // Every write goes to the device first, then (when sync is on) to the shared database.
+  const Data = {
+    async save(store, obj) { const ok = await Store.put(store, obj); if (ok) Sync.push(store, obj); return ok; },
+    async saveMany(store, arr) { const ok = await Store.putMany(store, arr); if (ok) Sync.pushMany(store, arr); return ok; },
+    async remove(store, id) { const ok = await Store.del(store, id); if (ok) Sync.remove(store, id); return ok; },
+    async removeMany(store, ids) { const ok = await Store.delMany(store, ids); if (ok) ids.forEach(id => Sync.remove(store, id)); return ok; },
+  };
+
+  // ======================================================================
+  // Data + helpers
+  // ======================================================================
+  let jobs = [], parts = [], stock = [];
+  let cur = { id: null, saved: false };          // job open in the detail pane
+  let photos = [], sigData = '';
+  let view = 'jobs', filter = 'open', taxYearSel = null, partsSeg = 'orders', ordersFilter = 'needed';
+
+  const JOB_FIELDS = ['ro','dateIn','arrival','status','pickupAddress','promised','customer','phone','email','address','type','make','model','serial','dom','hours','accessories','condition','engineMake','engineModel','engineSerial','problem','diagFee','pickupFee','estParts','estLabor','authUpTo','deposit','work','labor','other','taxRate','dateDone','datePicked','payment','releasedTo','notes'];
+  const CLOSED = new Set(['Picked Up / Delivered', 'Complete - Onsite', 'Abandoned']);
+  const PAID = new Set(['Picked Up / Delivered', 'Complete - Onsite']);
+  const PART_STATUSES = ['Needed', 'Ordered', 'Backordered', 'Received', 'Installed', 'Cancelled', 'Returned'];
+  const STOCK_STATUSES = ['Ordered', 'Backordered', 'Received', 'Returned', 'Cancelled'];
+  const partActive = p => p.status !== 'Cancelled' && p.status !== 'Returned';
+  const partOnOrder = p => p.status === 'Ordered' || p.status === 'Backordered';
+  const partNeeded = p => p.status === 'Needed';
+  const partOpen = p => partNeeded(p) || partOnOrder(p);   // not in hand yet
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const digits = s => String(s || '').replace(/\D/g, '');
+  const fmtRO = s => { const d = digits(s); return d.length === 10 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6) : (s || ''); };
+  const pad2 = n => String(n).padStart(2, '0');
+  const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  const usDate = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[2]}/${m[3]}/${m[1]}` : (iso || ''); };
+  const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+  const num = v => (v === '' || v == null || isNaN(+v)) ? 0 : +v;
+  const money = v => (v === '' || v == null || isNaN(+v)) ? '' : (+v).toFixed(2);
+  const fmtMoney = v => (num(v) < 0 ? '-' : '') + '$' + Math.abs(num(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const firstName = s => (s || '').trim().split(/\s+/)[0] || '';
+  const byDateDesc = (a, b) => (b.dateOrdered || b.date || '').localeCompare(a.dateOrdered || a.date || '') || (b.created || '').localeCompare(a.created || '');
+
+  function nextRO(dateIn, excludeId) {
+    const d = /^(\d{4})-(\d{2})/.exec(dateIn || ''); const now = new Date();
+    const prefix = d ? d[1] + d[2] : now.getFullYear() + pad2(now.getMonth() + 1);
+    let max = 0;
+    for (const j of jobs) { if (j.id === excludeId) continue; const r = digits(j.ro); if (r.length === 10 && r.startsWith(prefix)) max = Math.max(max, +r.slice(6)); }
+    return prefix + String(max + 1).padStart(4, '0');
+  }
+  function dupROs() { const seen = new Map(); for (const j of jobs) seen.set(j.ro, (seen.get(j.ro) || 0) + 1); return new Set([...seen].filter(([k, n]) => k && n > 1).map(([k]) => k)); }
+  const jobParts = jobId => parts.filter(p => p.jobId === jobId).sort((a, b) => (a.created || '').localeCompare(b.created || ''));
+  function otherCharges(o) { const a = o.pickupFee === '' || o.pickupFee == null ? null : +o.pickupFee, b = o.other === '' || o.other == null ? null : +o.other; return (a === null && b === null) ? null : (a || 0) + (b || 0); }
+  function invoice(o, jps) {
+    jps = jps || jobParts(o.id);
+    const act = jps.filter(partActive);
+    const partsCost = act.reduce((s, p) => s + num(p.qty) * num(p.unitCost), 0);
+    const partsSell = act.reduce((s, p) => s + num(p.qty) * num(p.unitSell), 0);
+    const rate = (o.taxRate !== '' && o.taxRate != null) ? num(o.taxRate) : num(settings.tax);
+    const tax = Math.round(partsSell * rate) / 100;
+    const other = otherCharges(o) || 0, labor = num(o.labor), deposit = num(o.deposit);
+    const total = partsSell + labor + other + tax;
+    return { partsCost, partsSell, labor, other, rate, tax, total, deposit, balance: total - deposit, openParts: jps.filter(partOpen).length, backordered: jps.filter(p => p.status === 'Backordered').length };
+  }
+  function engineText(o) { const head = [o.engineMake, o.engineModel].filter(Boolean).join(' '); return [head, o.engineSerial ? 'S/N ' + o.engineSerial : ''].filter(Boolean).join(' · '); }
+  const equipText = o => [o.type, o.make, o.model].filter(Boolean).join(' · ');
+
+  // Shop Stock summary from restock lines + parts used on jobs
+  function stockSummary() {
+    const map = new Map();
+    const lines = [...stock].sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.created || '').localeCompare(b.created || ''));
+    for (const l of lines) {
+      const pn = (l.partNo || '').trim().toUpperCase(); if (!pn) continue;
+      const s = map.get(pn) || { partNo: l.partNo.trim(), description: '', supplier: '', unitCost: null, unitSell: null, minKeep: null, received: 0, onOrder: 0, used: 0, lines: 0 };
+      s.lines++;
+      if (l.description) s.description = l.description; if (l.supplier && l.supplier !== 'On shelf') s.supplier = l.supplier;
+      if (l.unitCost !== '' && l.unitCost != null) s.unitCost = num(l.unitCost); if (l.unitSell !== '' && l.unitSell != null) s.unitSell = num(l.unitSell);
+      if (l.minKeep !== '' && l.minKeep != null) s.minKeep = num(l.minKeep);
+      if (l.status === 'Received') s.received += num(l.qty); else if (l.status === 'Ordered' || l.status === 'Backordered') s.onOrder += num(l.qty);
+      map.set(pn, s);
+    }
+    for (const p of parts) {
+      if ((p.supplier || '').trim().toLowerCase() !== 'shop stock' || !partActive(p) || partNeeded(p)) continue;
+      const pn = (p.partNo || '').trim().toUpperCase(); if (!pn) continue;
+      const s = map.get(pn) || { partNo: p.partNo.trim(), description: p.description || '', supplier: '', unitCost: null, unitSell: null, minKeep: null, received: 0, onOrder: 0, used: 0, lines: 0 };
+      s.used += num(p.qty); map.set(pn, s);
+    }
+    for (const s of map.values()) {
+      s.onHand = s.received - s.used; const min = s.minKeep == null ? 0 : s.minKeep;
+      s.state = s.onHand < 0 ? 'Check count' : s.onHand <= min ? (s.onOrder > 0 ? 'On Order' : 'REORDER') : 'OK';
+      s.value = Math.max(0, s.onHand) * (s.unitCost || 0);
+    }
+    return [...map.values()].sort((a, b) => a.partNo.localeCompare(b.partNo));
+  }
+  const stockByPN = () => { const m = new Map(); for (const s of stockSummary()) m.set(s.partNo.toUpperCase(), s); return m; };
+
+  // ======================================================================
+  // Views / tabs
+  // ======================================================================
+  function showView(v) {
+    view = v;
+    for (const name of ['jobs', 'stock', 'dash', 'setup']) { $('view-' + name).hidden = name !== v; $('tab-' + name).setAttribute('aria-selected', String(name === v)); }
+    if (v === 'jobs') renderList(); if (v === 'stock') renderPartsTab(); if (v === 'dash') renderDash(); if (v === 'setup') { updateStorage(); renderSyncUI(); }
+    window.scrollTo(0, 0);
+  }
+  $('tab-jobs').onclick = () => showView('jobs'); $('tab-stock').onclick = () => showView('stock'); $('tab-dash').onclick = () => showView('dash'); $('tab-setup').onclick = () => showView('setup');
+  const isWide = () => window.matchMedia('(min-width: 900px)').matches;
+  function showDetail(on) { $('jobsLayout').classList.toggle('show-detail', on); if (on) window.scrollTo(0, 0); }
+  $('btnBack').onclick = () => { showDetail(false); renderList(); };
+
+  // ======================================================================
+  // Job form
+  // ======================================================================
+  function collect() {
+    const o = {};
+    for (const k of JOB_FIELDS) o[k] = ($(k).value || '').trim();
+    o.ro = digits(o.ro);
+    const id = document.querySelector('input[name="idChecked"]:checked'); o.idChecked = id ? id.value : 'N/A';
+    return o;
+  }
+  function fill(o) {
+    for (const k of JOB_FIELDS) $(k).value = o[k] == null ? '' : (k === 'ro' ? fmtRO(o[k]) : o[k]);
+    const r = document.querySelector(`input[name="idChecked"][value="${o.idChecked || 'N/A'}"]`); if (r) r.checked = true;
+    document.querySelectorAll('.f .filled').forEach(el => el.classList.remove('filled'));
+    sigData = o.signature || ''; drawSig();
+    $('sigStatus').textContent = o.signature ? 'Signed ' + usDate(o.sigDate || '') : '';
+    updateEst(); updateInvoice(); renderThumbs(); renderParts(); renderHistory();
+    $('detailTitle').innerHTML = cur.saved ? `${esc(o.customer || 'No name')}<small>${esc(fmtRO(o.ro))}</small>` : 'New job';
+  }
+  function blank() {
+    const o = {}; for (const k of JOB_FIELDS) o[k] = '';
+    o.dateIn = todayISO(); o.arrival = 'Drop-off'; o.status = 'Waiting on Diagnosis'; o.idChecked = 'N/A'; o.diagFee = String(settings.fee ?? ''); o.ro = nextRO(o.dateIn, null);
+    return o;
+  }
+  function startNew() {
+    cur = { id: uid(), saved: false }; photos = []; sigData = '';
+    fill(blank()); $('scanEquip').value = ''; $('scanEngine').value = ''; $('resEquip').textContent = ''; $('resEngine').textContent = '';
+    delete $('ro').dataset.touched; clearDraft(); showView('jobs'); showDetail(true); renderList();
+  }
+  function openJob(id) {
+    const j = jobs.find(x => x.id === id); if (!j) return;
+    cur = { id, saved: true }; photos = (j.photos || []).slice();
+    fill(j); $('scanEquip').value = ''; $('scanEngine').value = ''; $('resEquip').textContent = ''; $('resEngine').textContent = '';
+    $('ro').dataset.touched = '1'; clearDraft(); showView('jobs'); showDetail(true); renderList();
+  }
+  $('btnNewJob').onclick = startNew;
+
+  // estimate
+  function updateEst() {
+    const p = num($('estParts').value), l = num($('estLabor').value), pf = num($('pickupFee').value);
+    const rate = ($('taxRate').value !== '' ? num($('taxRate').value) : num(settings.tax));
+    $('estTotal').textContent = fmtMoney(p + l + pf + Math.round(p * rate) / 100);
+    $('estTaxNote').textContent = 'incl. ' + rate + '% tax on parts' + (pf ? ' + pickup / delivery' : '');
+  }
+  function updateInvoice() {
+    const o = collect(); o.id = cur.id; const inv = invoice(o);
+    $('invParts').textContent = fmtMoney(inv.partsSell); $('invLabor').textContent = fmtMoney(inv.labor); $('invOther').textContent = fmtMoney(inv.other);
+    $('invTax').textContent = fmtMoney(inv.tax); $('invTaxLabel').textContent = `Sales tax (${inv.rate}% on parts)`;
+    $('invTotal').textContent = fmtMoney(inv.total); $('invDeposit').textContent = fmtMoney(inv.deposit); $('invBalance').textContent = fmtMoney(inv.balance);
+    const n = jobParts(cur.id).filter(partActive).length; $('invPartsNote').textContent = n ? `(${n} line${n === 1 ? '' : 's'})` : '';
+    $('invOtherNote').textContent = num(o.pickupFee) ? `(incl. pickup / delivery ${fmtMoney(o.pickupFee)})` : '';
+  }
+
+  // scan boxes -> fields
+  function setIf(id, val, f) { if (!val) return false; const el = $(id); if (el.value && !f.force) return false; el.value = val; el.classList.add('filled'); f.n++; return true; }
+  function applyEquip(p, f) { setIf('make', p.make, f); setIf('model', p.model, f); setIf('serial', p.serial, f); setIf('dom', p.dom, f); setIf('hours', p.hours, f); if (p.equipType && !$('type').value) { $('type').value = p.equipType; $('type').classList.add('filled'); f.n++; } }
+  function applyEngine(p, f) { setIf('engineMake', p.make, f); setIf('engineModel', LabelParser.engineModelText(p), f); setIf('engineSerial', p.serial, f); }
+  function handleScan(which) {
+    const ta = $(which === 'engine' ? 'scanEngine' : 'scanEquip'), res = $(which === 'engine' ? 'resEngine' : 'resEquip');
+    const text = ta.value.trim(); if (!text) { res.textContent = ''; return; }
+    const f = { n: 0, force: true }; const j = LabelParser.parseJSON(text);
+    if (j) {
+      setIf('make', j.make, f); setIf('model', j.model, f); setIf('serial', j.serial, f); setIf('dom', j.dom, f); setIf('hours', j.hours, f);
+      setIf('engineMake', j.engineMake, f); setIf('engineModel', j.engineModel, f); setIf('engineSerial', j.engineSerial, f);
+      if (j.equipType && !$('type').value) { const opt = [...$('type').options].find(o => o.text.toLowerCase() === j.equipType.toLowerCase()); if (opt) { $('type').value = opt.text; f.n++; } }
+      res.textContent = f.n ? `From the shortcut: ${f.n} field${f.n === 1 ? '' : 's'} filled. Check the serials against the plates.` : 'Shortcut text read, but no fields had values.';
+    } else {
+      const chunks = text.split(/\n\s*-{3,}\s*\n/);
+      if (which === 'equip') { applyEquip(LabelParser.parse(chunks[0], 'equipment'), f); if (chunks[1]) applyEngine(LabelParser.parse(chunks[1], 'engine'), f); }
+      else applyEngine(LabelParser.parse(text, 'engine'), f);
+      res.textContent = f.n ? `${f.n} field${f.n === 1 ? '' : 's'} filled from the label. Anything it missed is still in the text above.` : 'No model or serial found. Type them from the text above.';
+    }
+    renderHistory(); saveDraft();
+  }
+  const scanTimers = {};
+  for (const [id, which] of [['scanEquip', 'equip'], ['scanEngine', 'engine']]) {
+    $(id).addEventListener('paste', () => setTimeout(() => handleScan(which), 0));
+    $(id).addEventListener('input', () => { clearTimeout(scanTimers[which]); scanTimers[which] = setTimeout(() => handleScan(which), 700); });
+  }
+  $('clearScanEquip').onclick = () => { $('scanEquip').value = ''; $('resEquip').textContent = ''; };
+  $('clearScanEngine').onclick = () => { $('scanEngine').value = ''; $('resEngine').textContent = ''; };
+
+  // previous jobs on this machine
+  function renderHistory() {
+    const sn = ($('serial').value || '').trim().toUpperCase();
+    const prev = sn.length >= 5 ? jobs.filter(j => j.id !== cur.id && (j.serial || '').trim().toUpperCase() === sn).sort((a, b) => (b.dateIn || '').localeCompare(a.dateIn || '')) : [];
+    $('historyNote').textContent = prev.length ? `${prev.length} previous job${prev.length === 1 ? '' : 's'} on this serial` : '';
+    $('historyList').hidden = !prev.length;
+    $('historyList').innerHTML = prev.length ? `<div class="lines" style="margin-top:12px">${prev.map(j => `<button type="button" class="line" data-id="${j.id}"><span class="l1"><span class="pn">${esc(fmtRO(j.ro))}</span>${esc(usDate(j.dateIn))} · ${esc(j.status)}</span><span class="amt">${fmtMoney(invoice(j).total)}</span><span class="l2">${esc((j.problem || '').slice(0, 90))}${j.work ? ' → ' + esc(j.work.slice(0, 90)) : ''}</span></button>`).join('')}</div>` : '';
+    $('historyList').querySelectorAll('.line').forEach(b => b.onclick = () => openJob(b.dataset.id));
+  }
+
+  // draft (per-device convenience)
+  let draftTimer = null;
+  function saveDraft() { clearTimeout(draftTimer); draftTimer = setTimeout(() => { try { localStorage.setItem('shop-intake-draft', JSON.stringify({ cur, form: collect(), scanEquip: $('scanEquip').value, scanEngine: $('scanEngine').value })); } catch (e) {} }, 300); }
+  function loadDraft() { try { return JSON.parse(localStorage.getItem('shop-intake-draft') || 'null'); } catch (e) { return null; } }
+  function clearDraft() { try { localStorage.removeItem('shop-intake-draft'); } catch (e) {} }
+  $('jobForm').addEventListener('input', () => { saveDraft(); updateEst(); updateInvoice(); });
+  $('jobForm').addEventListener('change', saveDraft);
+  $('jobForm').addEventListener('submit', e => e.preventDefault());
+  $('serial').addEventListener('input', renderHistory);
+  $('dateIn').addEventListener('change', () => { if (!cur.saved && !$('ro').dataset.touched) $('ro').value = fmtRO(nextRO($('dateIn').value, null)); });
+  $('ro').addEventListener('input', () => { $('ro').dataset.touched = '1'; });
+  $('ro').addEventListener('blur', () => { $('ro').value = fmtRO($('ro').value); });
+  $('btnNextRO').onclick = () => { $('ro').value = fmtRO(nextRO($('dateIn').value, cur.id)); delete $('ro').dataset.touched; saveDraft(); };
+
+  // ======================================================================
+  // Signature pad
+  // ======================================================================
+  const sigC = $('sigCanvas'); let sigCtx = null, drawing = false, last = null;
+  function sizeSig() {
+    const w = sigC.clientWidth, h = sigC.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (!w || !h) return;
+    if (sigC.width !== Math.round(w * dpr) || sigC.height !== Math.round(h * dpr)) { sigC.width = Math.round(w * dpr); sigC.height = Math.round(h * dpr); sigCtx = sigC.getContext('2d'); sigCtx.scale(dpr, dpr); }
+    if (!sigCtx) sigCtx = sigC.getContext('2d');
+    sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round'; sigCtx.lineWidth = 2.2; sigCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#111';
+  }
+  function drawSig() {
+    sizeSig(); if (!sigCtx) return;
+    sigCtx.clearRect(0, 0, sigC.clientWidth, sigC.clientHeight); $('sigPh').hidden = !!sigData;
+    if (sigData) { const img = new Image(); img.onload = () => { sizeSig(); sigCtx.clearRect(0, 0, sigC.clientWidth, sigC.clientHeight); sigCtx.drawImage(img, 0, 0, sigC.clientWidth, sigC.clientHeight); }; img.src = sigData; }
+  }
+  const pos = e => { const r = sigC.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  sigC.addEventListener('pointerdown', e => { sizeSig(); drawing = true; last = pos(e); try { sigC.setPointerCapture(e.pointerId); } catch (err) {} $('sigPh').hidden = true; e.preventDefault(); });
+  sigC.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); sigCtx.beginPath(); sigCtx.moveTo(last.x, last.y); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); last = p; e.preventDefault(); });
+  const endStroke = e => { if (!drawing) return; drawing = false; try { sigData = sigC.toDataURL('image/png'); } catch (err) {} $('sigStatus').textContent = 'Signed ' + usDate(todayISO()) + ' (save the job to keep it)'; saveDraft(); };
+  sigC.addEventListener('pointerup', endStroke); sigC.addEventListener('pointercancel', endStroke); sigC.addEventListener('pointerleave', endStroke);
+  $('btnSigClear').onclick = () => { sigData = ''; drawSig(); $('sigStatus').textContent = ''; saveDraft(); };
+  window.addEventListener('resize', () => { if (view === 'jobs') drawSig(); });
+
+  // ======================================================================
+  // Photos
+  // ======================================================================
+  function compress(file) {
+    return new Promise(res => {
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => { const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.72)); };
+      img.onerror = () => { URL.revokeObjectURL(url); res(null); }; img.src = url;
+    });
+  }
+  async function addPhotos(files) { for (const f of files) { if (photos.length >= 6) { toast('Six photos is the limit'); break; } const d = await compress(f); if (d) photos.push(d); } renderThumbs(); }
+  function renderThumbs() {
+    $('thumbs').innerHTML = photos.map((p, i) => `<div class="thumb"><img src="${p}" alt="Photo ${i + 1}"><button type="button" data-i="${i}" aria-label="Remove photo ${i + 1}">×</button></div>`).join('');
+    $('thumbs').querySelectorAll('button').forEach(b => b.onclick = () => { photos.splice(+b.dataset.i, 1); renderThumbs(); });
+  }
+  $('photoCam').addEventListener('change', e => { addPhotos([...e.target.files]); e.target.value = ''; });
+  $('photoLib').addEventListener('change', e => { addPhotos([...e.target.files]); e.target.value = ''; });
+
+  // ======================================================================
+  // Save / delete job
+  // ======================================================================
+  async function saveJob(opts) {
+    opts = opts || {};
+    const o = collect();
+    if (!o.customer) { toast('Customer name is needed'); $('customer').focus(); return null; }
+    if (!o.ro || o.ro.length !== 10) { o.ro = nextRO(o.dateIn, cur.id); $('ro').value = fmtRO(o.ro); }
+    const dup = jobs.find(j => j.ro === o.ro && j.id !== cur.id);
+    if (dup) { toast(`R.O. ${fmtRO(o.ro)} is already used by ${dup.customer}`); $('ro').focus(); return null; }
+    const now = new Date().toISOString(); const existing = jobs.find(j => j.id === cur.id);
+    const job = { ...o, id: cur.id, photos: photos.slice(), signature: sigData, sigDate: sigData ? ((existing && existing.signature === sigData && existing.sigDate) || todayISO()) : '', created: existing ? existing.created : now, updated: now };
+    if (!(await Data.save('jobs', job))) { toast('Could not save on this device'); return null; }
+    jobs = jobs.filter(j => j.id !== job.id); jobs.push(job); cur.saved = true; clearDraft();
+    $('detailTitle').innerHTML = `${esc(job.customer)}<small>${esc(fmtRO(job.ro))}</small>`; $('sigStatus').textContent = job.signature ? 'Signed ' + usDate(job.sigDate) : '';
+    renderList(); updateCounts();
+    if (!opts.silent) toast(`Saved · R.O. ${fmtRO(job.ro)}` + (Store.fallback ? ' (photos not kept)' : ''));
+    return job;
+  }
+  $('btnSave').onclick = () => saveJob();
+  async function deleteJob(id) {
+    const pids = parts.filter(p => p.jobId === id).map(p => p.id);
+    await Data.remove('jobs', id); if (pids.length) await Data.removeMany('parts', pids);
+    jobs = jobs.filter(j => j.id !== id); parts = parts.filter(p => p.jobId !== id);
+    renderList(); updateCounts(); toast('Deleted'); showDetail(false); if (isWide()) startNew();
+  }
+  $('btnDetailMore').onclick = () => {
+    const o = collect(); o.id = cur.id;
+    const acts = [['Copy row for the workbook (Repair Orders)', '', () => { closeSheet(); textSheet('Row for the tracker', roRowText(o)); }]];
+    if (cur.saved) acts.push(['Delete this job', 'danger', () => { const b = sheetHost.querySelector('.btn.danger'); if (b.dataset.armed) { closeSheet(); deleteJob(cur.id); } else { b.dataset.armed = '1'; b.textContent = 'Tap again to delete for good'; } }]);
+    acts.push(['Start a new job', '', () => { closeSheet(); startNew(); }]);
+    actionSheet('Job', acts);
+  };
+
+  // ======================================================================
+  // Jobs list
+  // ======================================================================
+  function pillClass(s) { if (/^Waiting/.test(s)) return 'wait'; if (/Ready|Progress/.test(s)) return 'work'; if (/^Done/.test(s)) return 'done'; if (/Abandoned/.test(s)) return 'bad'; return ''; }
+  function renderList() {
+    const q = ($('search').value || '').toLowerCase().trim(); const today = todayISO(); const dups = dupROs();
+    let rows = [...jobs].sort((a, b) => (b.ro || '').localeCompare(a.ro || ''));
+    rows = rows.filter(j => filter === 'all' ? true : filter === 'open' ? !CLOSED.has(j.status) : filter === 'closed' ? CLOSED.has(j.status) : filter === 'ready' ? j.status === 'Done - Call Customer' : filter === 'parts' ? invoice(j).openParts > 0 : true);
+    if (q) rows = rows.filter(j => [j.ro, fmtRO(j.ro), j.customer, j.make, j.model, j.serial, j.type, j.phone, j.problem].join(' ').toLowerCase().includes(q));
+    if (!jobs.length) { $('jobList').innerHTML = `<div class="empty"><b>No jobs yet</b>Tap + New job. Scan the labels, fill in the customer, save. Jobs appear here newest first.</div>`; return; }
+    if (!rows.length) { $('jobList').innerHTML = `<div class="empty"><b>Nothing here</b>${q ? 'Try part of a name, an R.O. number or a serial.' : 'No jobs match this filter.'}</div>`; return; }
+    $('jobList').innerHTML = rows.map(j => {
+      const inv = invoice(j); const late = j.promised && j.promised < today && !CLOSED.has(j.status);
+      const extras = [dups.has(j.ro) ? 'same R.O. as another job — open it and tap Next' : '', inv.openParts ? `${inv.openParts} part${inv.openParts === 1 ? '' : 's'} open` : '', late ? `promised ${usDate(j.promised)}` : '', PAID.has(j.status) && !j.payment && inv.balance > 0.004 ? `unpaid ${fmtMoney(inv.balance)}` : '', j.photos && j.photos.length ? `📷 ${j.photos.length}` : ''].filter(Boolean).join(' · ');
+      return `<button type="button" class="job" data-id="${j.id}" aria-current="${j.id === cur.id && cur.saved}"${dups.has(j.ro) ? ' style="border-color:var(--bad)"' : ''}>
+      <span class="ro"${dups.has(j.ro) ? ' style="color:var(--bad);font-weight:600"' : ''}>${esc(fmtRO(j.ro))}</span><span class="pill ${late ? 'late' : pillClass(j.status)}">${esc(late ? 'Past promised' : j.status || '—')}</span>
+      <span class="who">${esc(j.customer || 'No name')}</span><span class="date">In ${esc(usDate(j.dateIn))}</span>
+      <span class="what" style="grid-column:1/-1">${esc(equipText(j) || 'Equipment not entered')}${extras ? ' · ' + esc(extras) : ''}</span></button>`;
+    }).join('');
+    $('jobList').querySelectorAll('.job').forEach(b => b.onclick = () => openJob(b.dataset.id));
+  }
+  $('search').addEventListener('input', renderList);
+  $('filters').querySelectorAll('.chip').forEach(c => c.onclick = () => { filter = c.dataset.f; $('filters').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c))); renderList(); });
+  function updateCounts() { const open = jobs.filter(j => !CLOSED.has(j.status)).length; $('jobCount').textContent = open || ''; const re = stockSummary().filter(s => s.state === 'REORDER').length + parts.filter(partNeeded).length; $('stockCount').textContent = re || ''; }
+
+  // ======================================================================
+  // Sheets (bottom sheets / dialogs)
+  // ======================================================================
+  const sheetHost = $('sheetHost');
+  function openSheet(html) { sheetHost.innerHTML = `<div class="sheet"><div class="card">${html}</div></div>`; sheetHost.querySelector('.sheet').addEventListener('click', e => { if (e.target.classList.contains('sheet')) closeSheet(); }); return sheetHost.querySelector('.card'); }
+  function closeSheet() { sheetHost.innerHTML = ''; }
+  function actionSheet(title, acts) {
+    const card = openSheet(`<h3>${esc(title)}</h3><div class="acts"></div>`); const box = card.querySelector('.acts');
+    for (const [label, cls, fn] of acts) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (cls || ''); b.textContent = label; b.onclick = fn; box.appendChild(b); }
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'btn quiet'; c.textContent = 'Close'; c.onclick = closeSheet; box.appendChild(c);
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+  }
+  function textSheet(title, text, extra) {
+    const card = openSheet(`<h3>${esc(title)}</h3><p class="note">If Copy doesn't take, press and hold inside the box to select and copy.</p><textarea class="out" id="sheetText" readonly></textarea><div class="acts"></div>`);
+    card.querySelector('#sheetText').value = text; const box = card.querySelector('.acts');
+    const mk = (label, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.onclick = fn; box.appendChild(b); return b; };
+    mk('Copy', 'primary', async () => toast((await copyText(text)) ? 'Copied' : 'Copy failed — select the text and copy it'));
+    if (!IN_CLAUDE && navigator.share) mk('Share…', '', () => navigator.share({ text }).catch(() => {}));
+    (extra || []).forEach(([l, cls, fn]) => mk(l, cls, fn));
+    mk('Close', 'quiet', closeSheet);
+  }
+  function field(id, label, type, value, extra) {
+    extra = extra || '';
+    if (type === 'select') return `<div class="f ${extra.includes('wide') ? 'wide' : ''}"><label for="${id}">${label}</label><select id="${id}">${value}</select></div>`;
+    if (type === 'textarea') return `<div class="f wide"><label for="${id}">${label}</label><textarea id="${id}">${esc(value || '')}</textarea></div>`;
+    const cls = type === 'money' || type === 'int' ? 'money' : type === 'mono' ? 'mono' : '';
+    const t = type === 'money' || type === 'int' ? 'number' : type === 'date' ? 'date' : 'text';
+    const step = type === 'money' ? ' step="0.01" inputmode="decimal"' : type === 'int' ? ' step="1" inputmode="numeric"' : '';
+    return `<div class="f ${extra.includes('wide') ? 'wide' : ''}"><label for="${id}">${label}</label><input id="${id}" class="${cls}" type="${t}"${step} value="${esc(value ?? '')}" autocomplete="off" ${extra.includes('list') ? 'list="' + extra.split('list=')[1].split(' ')[0] + '"' : ''}></div>`;
+  }
+  const opts = (list, sel) => list.map(s => `<option${s === sel ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  function datalists() {
+    const pns = new Set([...stockSummary().map(s => s.partNo), ...parts.map(p => (p.partNo || '').trim()).filter(Boolean)]);
+    const sups = new Set(['Shop Stock', 'Amazon', 'Walmart', ...parts.map(p => p.supplier), ...stock.map(s => s.supplier)].filter(Boolean));
+    return `<datalist id="dlParts">${[...pns].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist><datalist id="dlSup">${[...sups].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist>`;
+  }
+
+  // ======================================================================
+  // Parts on a job
+  // ======================================================================
+  function renderParts() {
+    const jps = jobParts(cur.id);
+    $('partsList').innerHTML = jps.length ? jps.map(p => `<button type="button" class="line ${partActive(p) ? '' : 'off'}" data-id="${p.id}">
+      <span class="l1"><span class="pn">${esc(p.partNo || '—')}</span>${esc(p.description || 'No description')}</span>
+      <span class="amt">${fmtMoney(num(p.qty) * num(p.unitSell))}<small>${esc(String(num(p.qty)))} × ${fmtMoney(p.unitSell)}</small></span>
+      <span class="l2">${esc(p.status)} · ${esc(p.supplier || 'no supplier yet')}${p.supplierOrderNo ? ' #' + esc(p.supplierOrderNo) : ''}${partOnOrder(p) && p.expected ? ' · expected ' + esc(usDate(p.expected)) : ''}${p.received && !partOpen(p) ? ' · received ' + esc(usDate(p.received)) : ''}</span></button>`).join('')
+      : `<div class="note">No parts yet. Parts ordered for this job or taken off the shelf go here; they total on the invoice.</div>`;
+    $('partsList').querySelectorAll('.line').forEach(b => b.onclick = () => partSheet(b.dataset.id));
+    const inv = invoice({ ...collect(), id: cur.id }, jps);
+    const nn = jps.filter(partNeeded).length, oo = jps.filter(partOnOrder).length; $('partsNote').textContent = jps.length ? `Cost ${fmtMoney(inv.partsCost)} · sell ${fmtMoney(inv.partsSell)}${nn ? ` · ${nn} to order` : ''}${oo ? ` · ${oo} on order` : ''}` : '';
+  }
+  $('btnAddPart').onclick = async () => { if (!cur.saved) { const j = await saveJob({ silent: true }); if (!j) return; } partSheet(null); };
+  function partSheet(id, jobId) {
+    const p = id ? parts.find(x => x.id === id) : { dateOrdered: '', partNo: '', description: '', qty: 1, supplier: '', supplierOrderNo: '', unitCost: '', unitSell: '', status: 'Needed', expected: '', received: '', notes: '' };
+    const jid = id ? p.jobId : (jobId || cur.id); const pj = jobs.find(x => x.id === jid);
+    const card = openSheet(`<h3>${id ? 'Part line' : 'Add part'}</h3>${pj ? `<p class="note" style="margin:0">${esc(fmtRO(pj.ro))} · ${esc(pj.customer)}${equipText(pj) ? ' · ' + esc(equipText(pj)) : ''}</p>` : ''}${datalists()}<div class="grid" style="margin-top:8px">
+      ${field('s_partNo', 'Part #', 'mono', p.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', p.supplier, 'list=dlSup')}
+      ${field('s_description', 'Description', 'text', p.description, 'wide')}
+      ${field('s_qty', 'Qty', 'int', p.qty)}${field('s_unitCost', 'Unit Cost $', 'money', p.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', p.unitSell)}
+      ${field('s_status', 'Status', 'select', opts(PART_STATUSES, p.status))}
+      ${field('s_dateOrdered', 'Date Ordered', 'date', p.dateOrdered)}${field('s_supplierOrderNo', 'Supplier Order #', 'text', p.supplierOrderNo)}${field('s_expected', 'Expected', 'date', p.expected)}${field('s_received', 'Received', 'date', p.received)}
+      ${field('s_notes', 'Notes', 'textarea', p.notes)}</div>
+      <div class="hint" id="s_stockHint" style="margin-top:6px;font-size:13px;color:var(--accent-ink)"></div>
+      <div class="acts row"><button type="button" class="btn primary" id="s_save">${id ? 'Save line' : 'Add line'}</button><button type="button" class="btn quiet" id="s_cancel">Cancel</button>${id ? '<button type="button" class="btn danger" id="s_del" style="grid-column:1/-1">Remove this line</button>' : ''}</div>`);
+    const g = k => card.querySelector('#s_' + k);
+    const hint = () => {
+      const pn = (g('partNo').value || '').trim().toUpperCase(); const s = pn ? stockByPN().get(pn) : null; const isShop = (g('supplier').value || '').trim().toLowerCase() === 'shop stock';
+      if (s && isShop) { g('stockHint').textContent = `Shop Stock: ${s.onHand} on hand${s.onOrder ? `, ${s.onOrder} on order` : ''}. ${s.unitSell != null ? 'Sells at ' + fmtMoney(s.unitSell) + '.' : ''}`; if (!g('description').value && s.description) g('description').value = s.description; if (g('unitCost').value === '' && s.unitCost != null) g('unitCost').value = s.unitCost; if (g('unitSell').value === '' && s.unitSell != null) g('unitSell').value = s.unitSell; if (!id && g('status').value === 'Needed') g('status').value = 'Installed'; }
+      else if (isShop && pn) g('stockHint').textContent = 'This part # is not on Shop Stock. It will still bill on the job; add a restock line for it so the count is right.';
+      else if (s && !isShop) g('stockHint').textContent = `This part # is on the shelf (${s.onHand} on hand). Pick supplier Shop Stock to use one from stock.`;
+      else g('stockHint').textContent = '';
+    };
+    g('partNo').addEventListener('input', hint); g('supplier').addEventListener('input', hint); hint();
+    g('status').addEventListener('change', () => { const st = g('status').value; if ((st === 'Received' || st === 'Installed') && !g('received').value) g('received').value = todayISO(); if ((st === 'Ordered' || st === 'Backordered') && !g('dateOrdered').value) g('dateOrdered').value = todayISO(); });
+    g('cancel').onclick = closeSheet;
+    g('save').onclick = async () => {
+      const line = { id: id || uid(), jobId: jid, dateOrdered: g('dateOrdered').value, partNo: g('partNo').value.trim(), description: g('description').value.trim(), qty: g('qty').value === '' ? 1 : num(g('qty').value), supplier: g('supplier').value.trim(), supplierOrderNo: g('supplierOrderNo').value.trim(), unitCost: g('unitCost').value === '' ? '' : num(g('unitCost').value), unitSell: g('unitSell').value === '' ? '' : num(g('unitSell').value), status: g('status').value, expected: g('expected').value, received: g('received').value, notes: g('notes').value.trim(), created: (p.created || new Date().toISOString()), updated: new Date().toISOString() };
+      if (!line.description && !line.partNo) { toast('A part # or a description is needed'); return; }
+      if (!(await Data.save('parts', line))) { toast('Could not save on this device'); return; }
+      parts = parts.filter(x => x.id !== line.id); parts.push(line); closeSheet(); afterPartsChange(); toast(id ? 'Line saved' : 'Part added');
+    };
+    if (id) g('del').onclick = async () => { if (!g('del').dataset.armed) { g('del').dataset.armed = '1'; g('del').textContent = 'Tap again to remove'; return; } await Data.remove('parts', id); parts = parts.filter(x => x.id !== id); closeSheet(); afterPartsChange(); toast('Line removed'); };
+  }
+  function afterPartsChange() { renderParts(); updateInvoice(); updateCounts(); if (view === 'stock') renderPartsTab(); if (view === 'jobs') renderList(); }
+
+  // ======================================================================
+  // Parts tab: job parts across all jobs (orders view) + shop stock
+  // ======================================================================
+  function renderPartsTab() {
+    $('ordersView').hidden = partsSeg !== 'orders'; $('shelfView').hidden = partsSeg !== 'shelf';
+    $('partsSeg').querySelectorAll('.segbtn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.seg === partsSeg)));
+    $('ordersCount').textContent = parts.filter(partNeeded).length || ''; $('shelfCount').textContent = stockSummary().filter(s => s.state === 'REORDER').length || '';
+    if (partsSeg === 'orders') renderOrders(); else renderStock();
+  }
+  $('partsSeg').querySelectorAll('.segbtn').forEach(b => b.onclick = () => { partsSeg = b.dataset.seg; renderPartsTab(); });
+  $('ordersFilters').querySelectorAll('.chip').forEach(c => c.onclick = () => { ordersFilter = c.dataset.f; $('ordersFilters').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c))); renderOrders(); });
+  $('ordersSearch').addEventListener('input', renderOrders);
+  function orderLine(p, j, today) {
+    const late = p.status === 'Ordered' && p.expected && p.expected < today;
+    const when = partNeeded(p) ? (p.dateOrdered ? 'needed since ' + usDate(p.dateOrdered) : '') : partOnOrder(p) ? [p.dateOrdered ? 'ordered ' + usDate(p.dateOrdered) : '', p.expected ? (late ? 'was expected ' : 'expected ') + usDate(p.expected) : ''].filter(Boolean).join(' · ') : (p.received ? 'received ' + usDate(p.received) : '');
+    const qa = partOnOrder(p) ? `<button type="button" class="btn sm qa" data-qa="received" data-id="${p.id}">Received</button>` : p.status === 'Received' ? `<button type="button" class="btn sm qa" data-qa="installed" data-id="${p.id}">Installed</button>` : partNeeded(p) ? `<button type="button" class="btn sm qa" data-qa="order" data-id="${p.id}">Ordered</button>` : '';
+    return `<div class="line row ${partActive(p) ? '' : 'off'} ${partNeeded(p) ? 'needed' : ''} ${late ? 'late' : ''}" data-id="${p.id}" role="button" tabindex="0">
+      <span class="l1"><span class="pn">${esc(p.partNo || '—')}</span>${esc(p.description || 'No description')}</span>
+      <span class="amt">${esc(String(num(p.qty)))} × ${fmtMoney(p.unitCost)}<small>${esc(p.status)}</small></span>${qa}
+      <span class="l2">${j ? `<b>${esc(fmtRO(j.ro))}</b> ${esc(j.customer)}${[j.make, j.model].filter(Boolean).length ? ' · ' + esc([j.make, j.model].filter(Boolean).join(' ')) : (j.type ? ' · ' + esc(j.type) : '')}` : 'job not found'}${p.supplierOrderNo ? ' · #' + esc(p.supplierOrderNo) : ''}${when ? ' · ' + esc(when) : ''}</span></div>`;
+  }
+  function renderOrders() {
+    const today = todayISO(); const q = ($('ordersSearch').value || '').toLowerCase().trim(); const jmap = new Map(jobs.map(j => [j.id, j]));
+    let rows = parts.filter(p => ordersFilter === 'all' ? true : ordersFilter === 'needed' ? partNeeded(p) : ordersFilter === 'onorder' ? partOnOrder(p) : p.status === 'Received');
+    if (q) rows = rows.filter(p => { const j = jmap.get(p.jobId) || {}; return [p.partNo, p.description, p.supplier, p.supplierOrderNo, p.status, j.ro, fmtRO(j.ro), j.customer, j.make, j.model].join(' ').toLowerCase().includes(q); });
+    rows.sort((a, b) => (a.supplier || '~').localeCompare(b.supplier || '~') || (a.dateOrdered || '').localeCompare(b.dateOrdered || '') || (a.created || '').localeCompare(b.created || ''));
+    const counts = { needed: parts.filter(partNeeded).length, onorder: parts.filter(partOnOrder).length, received: parts.filter(p => p.status === 'Received').length, all: parts.length };
+    $('ordersFilters').querySelectorAll('.chip').forEach(c => { const n = counts[c.dataset.f]; c.textContent = c.textContent.replace(/\s*\(\d+\)$/, '') + (n ? ` (${n})` : ''); });
+    let html = '';
+    if (!rows.length) {
+      html = `<div class="empty"><b>${ordersFilter === 'needed' ? 'Nothing to order' : ordersFilter === 'onorder' ? 'Nothing on order' : ordersFilter === 'received' ? 'Nothing waiting to go on' : 'No part lines yet'}</b>${ordersFilter === 'needed' ? 'Parts marked Needed on a job show up here, grouped by supplier, ready to order in one go.' : 'Parts are added from inside each job.'}</div>`;
+    } else if (ordersFilter === 'needed' || ordersFilter === 'onorder') {
+      const groups = new Map(); for (const p of rows) { const k = (p.supplier || '').trim() || 'No supplier yet'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
+      for (const [sup, ps] of groups) {
+        const cost = ps.reduce((s, p) => s + num(p.qty) * num(p.unitCost), 0); const jobsN = new Set(ps.map(p => p.jobId)).size;
+        const act = ordersFilter === 'needed' ? `<button type="button" class="btn sm primary" data-order-group="${esc(sup)}">Order these (${ps.length})</button>` : `<button type="button" class="btn sm" data-receive-group="${esc(sup)}">All received</button>`;
+        html += `<div class="grp"><h3>${esc(sup)}<small>${ps.length} line${ps.length === 1 ? '' : 's'} · ${jobsN} job${jobsN === 1 ? '' : 's'} · ${fmtMoney(cost)} at cost</small></h3>${act}</div><div class="lines">${ps.map(p => orderLine(p, jmap.get(p.jobId), today)).join('')}</div>`;
+      }
+    } else html = `<div class="lines">${rows.map(p => orderLine(p, jmap.get(p.jobId), today)).join('')}</div>`;
+    if (ordersFilter === 'needed') {
+      const re = stockSummary().filter(s => s.state === 'REORDER' || s.state === 'Check count');
+      if (re.length) html += `<div class="grp"><h3>Shop stock below minimum<small>${re.length} part${re.length === 1 ? '' : 's'}</small></h3></div><div class="lines">${re.map(s => `<div class="line row needed" data-restock="${esc(s.partNo)}" role="button" tabindex="0"><span class="l1"><span class="pn">${esc(s.partNo)}</span>${esc(s.description || '')}</span><span class="amt">${s.onHand} on hand<small>min ${s.minKeep == null ? 0 : s.minKeep}</small></span><button type="button" class="btn sm qa" data-restock-btn="${esc(s.partNo)}">Restock</button><span class="l2">${esc(s.supplier || 'supplier not recorded')}${s.unitCost != null ? ' · last cost ' + fmtMoney(s.unitCost) : ''}</span></div>`).join('')}</div>`;
+    }
+    $('ordersList').innerHTML = html;
+    $('ordersList').querySelectorAll('.line[data-id]').forEach(el => { el.onclick = e => { if (e.target.closest('.qa')) return; partSheet(el.dataset.id); }; el.onkeydown = e => { if (e.key === 'Enter') partSheet(el.dataset.id); }; });
+    $('ordersList').querySelectorAll('.qa[data-qa]').forEach(b => b.onclick = e => { e.stopPropagation(); quickStatus(b.dataset.id, b.dataset.qa); });
+    $('ordersList').querySelectorAll('[data-order-group]').forEach(b => b.onclick = () => orderGroupSheet(rows.filter(p => ((p.supplier || '').trim() || 'No supplier yet') === b.dataset.orderGroup)));
+    $('ordersList').querySelectorAll('[data-receive-group]').forEach(b => b.onclick = async () => { const ps = rows.filter(p => ((p.supplier || '').trim() || 'No supplier yet') === b.dataset.receiveGroup); const t = todayISO(), now = new Date().toISOString(); const upd = ps.map(p => ({ ...p, status: 'Received', received: p.received || t, updated: now })); if (!(await Data.saveMany('parts', upd))) { toast('Could not save'); return; } const ids = new Set(upd.map(p => p.id)); parts = [...parts.filter(p => !ids.has(p.id)), ...upd]; afterPartsChange(); toast(`${upd.length} line${upd.length === 1 ? '' : 's'} received`); });
+    $('ordersList').querySelectorAll('.line[data-restock]').forEach(el => { const go = () => { const s = stockByPN().get(el.dataset.restock.toUpperCase()); const min = s && s.minKeep != null ? s.minKeep : 0; stockSheet(null, { partNo: s.partNo, description: s.description, supplier: s.supplier, unitCost: s.unitCost == null ? '' : s.unitCost, unitSell: s.unitSell == null ? '' : s.unitSell, qty: Math.max(1, min * 2 - s.onHand), minKeep: s.minKeep == null ? '' : s.minKeep }); }; el.onclick = go; el.onkeydown = e => { if (e.key === 'Enter') go(); }; });
+  }
+  async function quickStatus(id, what) {
+    const p = parts.find(x => x.id === id); if (!p) return;
+    if (what === 'order') { orderGroupSheet([p]); return; }
+    const t = todayISO(); const upd = { ...p, status: what === 'received' ? 'Received' : 'Installed', received: p.received || t, updated: new Date().toISOString() };
+    if (!(await Data.save('parts', upd))) { toast('Could not save'); return; }
+    parts = [...parts.filter(x => x.id !== id), upd]; afterPartsChange(); toast(upd.status === 'Received' ? 'Marked received' : 'Marked installed');
+  }
+  function orderGroupSheet(ps) {
+    const sups = [...new Set(ps.map(p => (p.supplier || '').trim()).filter(Boolean))]; const jmap = new Map(jobs.map(j => [j.id, j]));
+    const card = openSheet(`<h3>Order ${ps.length} line${ps.length === 1 ? '' : 's'}</h3>${datalists()}<div class="picked">${ps.map(p => { const j = jmap.get(p.jobId) || {}; return `<span><b>${esc(String(num(p.qty)))} × ${esc(p.partNo || p.description)}</b>${p.partNo && p.description ? ' ' + esc(p.description) : ''} — ${esc(fmtRO(j.ro))} ${esc(j.customer || '')}</span>`; }).join('')}</div>
+      <div class="grid">${field('s_supplier', 'Supplier', 'text', sups.length === 1 ? sups[0] : '', 'list=dlSup')}${field('s_supplierOrderNo', 'Supplier order #', 'text', '')}${field('s_dateOrdered', 'Date ordered', 'date', todayISO())}${field('s_expected', 'Expected', 'date', '')}</div>
+      <p class="note" style="margin:8px 0 0">Every line above becomes <b>Ordered</b> with this supplier, order number and dates. Prices stay as entered on each line.</p>
+      <div class="acts row"><button type="button" class="btn primary" id="s_save">Mark ordered</button><button type="button" class="btn quiet" id="s_cancel">Cancel</button></div>`);
+    const g = k => card.querySelector('#s_' + k); g('cancel').onclick = closeSheet;
+    g('save').onclick = async () => {
+      const now = new Date().toISOString(); const sup = g('supplier').value.trim();
+      const upd = ps.map(p => ({ ...p, status: 'Ordered', supplier: sup || p.supplier, supplierOrderNo: g('supplierOrderNo').value.trim() || p.supplierOrderNo, dateOrdered: g('dateOrdered').value || todayISO(), expected: g('expected').value || p.expected, updated: now }));
+      if (!(await Data.saveMany('parts', upd))) { toast('Could not save'); return; }
+      const ids = new Set(upd.map(p => p.id)); parts = [...parts.filter(p => !ids.has(p.id)), ...upd]; closeSheet(); afterPartsChange(); toast(`${upd.length} line${upd.length === 1 ? '' : 's'} marked ordered`);
+    };
+  }
+
+  // ======================================================================
+  // Shop stock (shelf view)
+  // ======================================================================
+  function renderStock() {
+    const sum = stockSummary();
+    $('tileReorder').querySelector('.v').textContent = sum.filter(s => s.state === 'REORDER').length; $('tileReorder').classList.toggle('alert', sum.some(s => s.state === 'REORDER'));
+    $('tileOnOrder').textContent = sum.reduce((n, s) => n + s.onOrder, 0); $('tileShelfValue').textContent = fmtMoney(sum.reduce((n, s) => n + s.value, 0)).replace(/\.00$/, '');
+    $('stockSummary').innerHTML = sum.length ? `<thead><tr><th>Part #</th><th>Description</th><th class="n">On hand</th><th class="n">On order</th><th class="n">Min</th><th>Status</th><th class="n">Sell</th></tr></thead><tbody>${sum.map(s => `<tr class="rowbtn" data-pn="${esc(s.partNo)}"><td class="mono">${esc(s.partNo)}</td><td>${esc(s.description || '')}<div class="hint" style="font-size:12px">${esc(s.supplier || '')}</div></td><td class="n"><b>${s.onHand}</b></td><td class="n">${s.onOrder || ''}</td><td class="n">${s.minKeep == null ? '' : s.minKeep}</td><td><span class="pill ${s.state === 'REORDER' || s.state === 'Check count' ? 'bad' : s.state === 'On Order' ? 'wait' : 'done'}">${esc(s.state)}</span></td><td class="n">${s.unitSell == null ? '' : fmtMoney(s.unitSell)}</td></tr>`).join('')}</tbody>`
+      : `<tbody><tr><td><div class="empty"><b>Nothing on the shelf yet</b>Tap + Restock to log what you keep on hand. For what's already there, use supplier "On shelf" and status Received.</div></td></tr></tbody>`;
+    $('stockSummary').querySelectorAll('tr.rowbtn').forEach(tr => tr.onclick = () => { $('stockSearch').value = tr.dataset.pn; renderStockLines(); if (!isWide()) $('stockLines').scrollIntoView({ behavior: 'smooth' }); });
+    renderStockLines();
+  }
+  function renderStockLines() {
+    const q = ($('stockSearch').value || '').toLowerCase().trim();
+    let rows = [...stock].sort(byDateDesc);
+    if (q) rows = rows.filter(l => [l.partNo, l.description, l.supplier, l.supplierOrderNo, l.status].join(' ').toLowerCase().includes(q));
+    $('stockLines').innerHTML = rows.length ? rows.map(l => `<button type="button" class="line ${l.status === 'Cancelled' || l.status === 'Returned' ? 'off' : ''}" data-id="${l.id}">
+      <span class="l1"><span class="pn">${esc(l.partNo || '—')}</span>${esc(l.description || '')}</span><span class="amt">${esc(String(num(l.qty)))} × ${fmtMoney(l.unitCost)}<small>${fmtMoney(num(l.qty) * num(l.unitCost))}</small></span>
+      <span class="l2">${esc(usDate(l.date))} · ${esc(l.status)} · ${esc(l.supplier || '')}${l.supplierOrderNo ? ' #' + esc(l.supplierOrderNo) : ''}${(l.status === 'Ordered' || l.status === 'Backordered') && l.expected ? ' · expected ' + esc(usDate(l.expected)) : ''}</span></button>`).join('')
+      : `<div class="note">${q ? 'No restock lines match.' : 'No restock lines yet.'}</div>`;
+    $('stockLines').querySelectorAll('.line').forEach(b => b.onclick = () => stockSheet(b.dataset.id));
+  }
+  $('stockSearch').addEventListener('input', renderStockLines);
+  $('btnAddStock').onclick = () => stockSheet(null);
+  function stockSheet(id, prefill) {
+    const l = id ? stock.find(x => x.id === id) : { date: todayISO(), partNo: '', description: '', qty: 1, supplier: '', supplierOrderNo: '', unitCost: '', unitSell: '', status: 'Ordered', expected: '', received: '', notes: '', minKeep: '', ...(prefill || {}) };
+    const card = openSheet(`<h3>${id ? 'Restock line' : 'Restock'}</h3>${datalists()}<p class="note" style="margin:0 0 8px">First time for a part: fill everything in. Repeat order: pick the Part # and the description, prices and minimum carry forward. Already on the shelf: supplier <b>On shelf</b>, status <b>Received</b>.</p><div class="grid">
+      ${field('s_partNo', 'Part #', 'mono', l.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', l.supplier, 'list=dlSup')}
+      ${field('s_description', 'Description', 'text', l.description, 'wide')}
+      ${field('s_qty', 'Qty', 'int', l.qty)}${field('s_unitCost', 'Unit Cost $', 'money', l.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', l.unitSell)}${field('s_minKeep', 'Min to keep', 'int', l.minKeep)}
+      ${field('s_status', 'Status', 'select', opts(STOCK_STATUSES, l.status))}${field('s_date', 'Date', 'date', l.date)}${field('s_expected', 'Expected', 'date', l.expected)}${field('s_received', 'Received', 'date', l.received)}
+      ${field('s_supplierOrderNo', 'Supplier Order #', 'text', l.supplierOrderNo)}${field('s_notes', 'Notes', 'textarea', l.notes)}</div>
+      <div class="acts row"><button type="button" class="btn primary" id="s_save">${id ? 'Save line' : 'Add line'}</button><button type="button" class="btn quiet" id="s_cancel">Cancel</button>${id ? '<button type="button" class="btn danger" id="s_del" style="grid-column:1/-1">Remove this line</button>' : ''}</div>`);
+    const g = k => card.querySelector('#s_' + k);
+    g('partNo').addEventListener('change', () => { const s = stockByPN().get((g('partNo').value || '').trim().toUpperCase()); if (!s) return; if (!g('description').value) g('description').value = s.description || ''; if (!g('supplier').value && s.supplier) g('supplier').value = s.supplier; if (g('unitCost').value === '' && s.unitCost != null) g('unitCost').value = s.unitCost; if (g('unitSell').value === '' && s.unitSell != null) g('unitSell').value = s.unitSell; });
+    g('status').addEventListener('change', () => { if (g('status').value === 'Received' && !g('received').value) g('received').value = todayISO(); });
+    g('supplier').addEventListener('change', () => { if (/^on shelf$/i.test(g('supplier').value.trim())) { g('status').value = 'Received'; if (!g('received').value) g('received').value = g('date').value || todayISO(); } });
+    g('cancel').onclick = closeSheet;
+    g('save').onclick = async () => {
+      const line = { id: id || uid(), date: g('date').value, partNo: g('partNo').value.trim(), description: g('description').value.trim(), qty: g('qty').value === '' ? 1 : num(g('qty').value), supplier: g('supplier').value.trim(), supplierOrderNo: g('supplierOrderNo').value.trim(), unitCost: g('unitCost').value === '' ? '' : num(g('unitCost').value), unitSell: g('unitSell').value === '' ? '' : num(g('unitSell').value), status: g('status').value, expected: g('expected').value, received: g('received').value, notes: g('notes').value.trim(), minKeep: g('minKeep').value === '' ? '' : num(g('minKeep').value), created: (l.created || new Date().toISOString()), updated: new Date().toISOString() };
+      if (!line.partNo) { toast('A part # is needed'); g('partNo').focus(); return; }
+      if (!(await Data.save('stock', line))) { toast('Could not save on this device'); return; }
+      stock = stock.filter(x => x.id !== line.id); stock.push(line); closeSheet(); renderPartsTab(); updateCounts(); toast(id ? 'Line saved' : 'Restock added');
+    };
+    if (id) g('del').onclick = async () => { if (!g('del').dataset.armed) { g('del').dataset.armed = '1'; g('del').textContent = 'Tap again to remove'; return; } await Data.remove('stock', id); stock = stock.filter(x => x.id !== id); closeSheet(); renderPartsTab(); updateCounts(); toast('Line removed'); };
+  }
+
+  // ======================================================================
+  // Dashboard + Sales & Tax
+  // ======================================================================
+  function renderDash() {
+    const today = todayISO(); const ym = today.slice(0, 7);
+    const open = jobs.filter(j => !CLOSED.has(j.status)); const invs = new Map(jobs.map(j => [j.id, invoice(j)]));
+    const waiting = open.filter(j => invs.get(j.id).openParts > 0).sort((a, b) => (a.dateIn || '').localeCompare(b.dateIn || ''));
+    const ready = jobs.filter(j => j.status === 'Done - Call Customer').sort((a, b) => (a.dateDone || a.dateIn || '').localeCompare(b.dateDone || b.dateIn || ''));
+    const late = open.filter(j => j.promised && j.promised < today);
+    const openLines = parts.filter(partOnOrder); const pastExp = openLines.filter(p => p.status === 'Ordered' && p.expected && p.expected < today); const needed = parts.filter(partNeeded).length;
+    const paidThisMonth = jobs.filter(j => (j.datePicked || '').startsWith(ym));
+    const sumBy = (arr, fn) => arr.reduce((s, j) => s + fn(invs.get(j.id), j), 0);
+    const re = stockSummary().filter(s => s.state === 'REORDER').length;
+    $('dashAsOf').textContent = 'as of ' + usDate(today);
+    const tiles = [
+      ['Machines in the shop', open.length, '', () => setFilter('open')], ['Waiting on parts', waiting.length, waiting.length ? 'warn' : '', () => setFilter('parts')],
+      ['Parts to order', needed, needed ? 'warn' : '', () => gotoParts('orders', 'needed')], [pastExp.length ? `Parts on order · ${pastExp.length} past expected` : 'Parts on order (lines)', openLines.length, pastExp.length ? 'alert' : '', () => gotoParts('orders', 'onorder')],
+      ['Ready — call customer', ready.length, ready.length ? 'go' : '', () => setFilter('ready')], ['Past promised date', late.length, late.length ? 'alert' : '', null],
+      ['Deposits held (open jobs)', fmtMoney(sumBy(open, i => i.deposit)), '', null], ['Stock parts to reorder', re, re ? 'alert' : '', () => gotoParts('shelf')],
+      ['Invoiced this month', fmtMoney(sumBy(paidThisMonth, i => i.total)), '', null], ['of which parts', fmtMoney(sumBy(paidThisMonth, i => i.partsSell)), '', null], ['of which labor', fmtMoney(sumBy(paidThisMonth, i => i.labor)), '', null], ['sales tax collected', fmtMoney(sumBy(paidThisMonth, i => i.tax)), '', null],
+    ];
+    $('tiles').innerHTML = tiles.map(([k, v, cls, fn], i) => `<${fn ? 'button type="button"' : 'div'} class="tile ${cls}" data-i="${i}"><div class="v">${esc(String(v))}</div><div class="k">${esc(k)}</div></${fn ? 'button' : 'div'}>`).join('');
+    $('tiles').querySelectorAll('button.tile').forEach(b => b.onclick = tiles[+b.dataset.i][3]);
+    const jobLine = (j, extra) => `<button type="button" class="line" data-id="${j.id}"><span class="l1"><span class="pn">${esc(fmtRO(j.ro))}</span>${esc(j.customer)}</span><span class="amt">${esc(extra)}</span><span class="l2">${esc(equipText(j))}${j.phone ? ' · ' + esc(j.phone) : ''}</span></button>`;
+    $('dashWaiting').innerHTML = waiting.length ? `<div class="lines">${waiting.map(j => { const jp = jobParts(j.id).filter(partOpen); const oldest = jp.map(p => p.dateOrdered).filter(Boolean).sort()[0]; const nn = jp.filter(partNeeded).length; return jobLine(j, `${nn ? nn + ' to order' : ''}${nn && jp.length - nn ? ' · ' : ''}${jp.length - nn ? (jp.length - nn) + ' on order' : ''}${jp.some(p => p.status === 'Backordered') ? ' · B/O' : ''}${oldest && jp.length - nn ? ' · ' + daysBetween(oldest, today) + 'd' : ''}`); }).join('')}</div>` : '<div class="note">No jobs waiting on parts.</div>';
+    $('dashReady').innerHTML = ready.length ? `<div class="lines">${ready.map(j => jobLine(j, `due ${fmtMoney(invs.get(j.id).balance)}${j.dateDone ? ' · done ' + usDate(j.dateDone) : ''}`)).join('')}</div>` : '<div class="note">Nothing waiting for pickup.</div>';
+    document.querySelectorAll('#dashWaiting .line, #dashReady .line').forEach(b => b.onclick = () => openJob(b.dataset.id));
+    renderTax();
+  }
+  function gotoParts(seg, f) { partsSeg = seg; if (f) { ordersFilter = f; $('ordersFilters').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.f === f))); } showView('stock'); }
+  function setFilter(f) { filter = f; $('filters').querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.f === f))); renderList(); showView('jobs'); showDetail(false); }
+  function renderTax() {
+    const years = new Set(jobs.map(j => (j.datePicked || '').slice(0, 4)).filter(Boolean)); years.add(String(new Date().getFullYear()));
+    const ys = [...years].sort().reverse(); if (!taxYearSel || !years.has(taxYearSel)) taxYearSel = ys[0];
+    $('taxYear').innerHTML = ys.map(y => `<option${y === taxYearSel ? ' selected' : ''}>${y}</option>`).join('');
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const cols = ['Jobs paid', 'Parts sold', 'Labor', 'Other', 'Sales tax', 'Total invoiced', 'Cash', 'Card', 'Check', 'Other pay', 'No method', 'Parts cost'];
+    const zero = () => cols.map(() => 0); const add = (a, b) => a.map((v, i) => v + b[i]);
+    const rowFor = js => { const r = zero(); for (const j of js) { const i = invoice(j); r[0]++; r[1] += i.partsSell; r[2] += i.labor; r[3] += i.other; r[4] += i.tax; r[5] += i.total; const m = { Cash: 6, Card: 7, Check: 8, Other: 9 }[j.payment]; if (m) r[m] += i.total; else r[10] += i.total; r[11] += i.partsCost; } return r; };
+    const cell = (v, i) => `<td class="n">${i === 0 ? v : (v ? fmtMoney(v) : '–')}</td>`;
+    let html = `<thead><tr><th>Month</th>${cols.map(c => `<th class="n">${c}</th>`).join('')}</tr></thead><tbody>`; let year = zero();
+    for (let q = 0; q < 4; q++) {
+      let qt = zero();
+      for (let m = q * 3; m < q * 3 + 3; m++) { const key = `${taxYearSel}-${pad2(m + 1)}`; const r = rowFor(jobs.filter(j => (j.datePicked || '').startsWith(key))); qt = add(qt, r); html += `<tr><td>${MON[m]} ${taxYearSel}</td>${r.map(cell).join('')}</tr>`; }
+      year = add(year, qt); html += `<tr class="sub"><td>Q${q + 1}</td>${qt.map(cell).join('')}</tr>`;
+    }
+    html += `<tr class="year"><td>Year ${taxYearSel}</td>${year.map(cell).join('')}</tr></tbody>`;
+    $('taxTable').innerHTML = html;
+    const closedPaid = jobs.filter(j => PAID.has(j.status));
+    const checks = [['Closed jobs with no Date Picked Up / Paid (not counted above)', closedPaid.filter(j => !j.datePicked).length], ['Closed jobs with no payment method', closedPaid.filter(j => !j.payment).length], ['Closed jobs with a $0 invoice', closedPaid.filter(j => invoice(j).total < 0.005).length], ['Jobs sharing an R.O. number (open one and tap Next)', jobs.filter(j => dupROs().has(j.ro)).length]];
+    $('taxChecks').innerHTML = checks.map(([k, v]) => `<span class="k">${k}</span><span><b style="color:${v ? 'var(--bad)' : 'var(--good)'}">${v}</b></span>`).join('');
+  }
+  $('taxYear').addEventListener('change', () => { taxYearSel = $('taxYear').value; renderTax(); });
+
+  // ======================================================================
+  // Print: Repair Order (page 1) + Invoice (page 2)
+  // ======================================================================
+  const ck = on => on ? '☒' : '☐';
+  function fld(k, v, cls) { return `<div class="fld"><div class="k">${esc(k)}</div><div class="v ${cls || ''}">${esc(v ?? '')}</div></div>`; }
+  function termsHTML(s) {
+    const biz = s.shop, fee = v => '$' + Math.round(num(v));
+    const t = [
+      `1. Estimates. Estimates are based on our initial inspection. If additional problems are found, we stop and contact you before exceeding your authorized amount. If you decline repairs after diagnosis, the diagnostic fee is due.`,
+      `2. Parts and tax. Parts and labor are billed separately. South Carolina sales tax applies to parts. Special-order parts require a deposit, which is non-refundable once ordered. Replaced parts are discarded unless requested at drop-off.`,
+      `3. Payment. Payment in full is due when work is complete and before equipment is released. We accept cash and cards. Returned payments are subject to a ${fee(s.returned)} fee.`,
+      `4. Limited warranty. Labor is guaranteed for ${s.warranty} days from pickup or delivery. Parts carry the manufacturer's warranty only. This warranty covers the specific repair performed and does not cover unrelated failures, problems caused by stale, contaminated, or improper fuel, normal wear, lack of maintenance, misuse, accident, weather, or work by others. Your sole remedy is re-repair of the covered work at our shop; we are not liable for lost use, lost income, or other consequential damages. THIS IS A LIMITED WARRANTY. You may have other rights under state law.`,
+      `5. Fuel. Stale fuel is the leading cause of small engine failure. Old or contaminated fuel will be drained and disposed of; a fuel disposal fee of ${fee(s.fuel)} may apply. We recommend ethanol-free fuel and stabilizer for stored equipment.`,
+      `6. Emission controls. Federal law prohibits removing or disabling emission controls or spark arrestors. We do not perform this work.`,
+      `7. Ownership. You confirm you own this equipment or are authorized by the owner to have it repaired. For motorcycles, ATVs, and UTVs we record photo ID and VIN.`,
+      `8. Storage and abandoned equipment. We notify you by phone or text when equipment is ready. A storage fee of ${fee(s.storage)} per day begins ${s.grace} days after that notice. Equipment not picked up within ${s.abandon} days of notice is considered abandoned. After written notice to the address on this order, we may sell or dispose of abandoned equipment to recover repair, storage, and disposal charges under South Carolina's repair and storage lien law (S.C. Code Ann. § 29-15-10 et seq.).`,
+      `9. Care of equipment. We take reasonable care of your equipment while it is in our possession. Please remove fuel cans, personal items, and accessories not needed for the repair; we are not responsible for items left with the equipment.`,
+      `10. On-site work. For repairs at your location, please provide a safe, level, well-ventilated work area. We do not run engines in enclosed spaces. Fuel or oil we drain is removed from your property.`,
+      `11. Agreement. By signing, you authorize ${biz} to perform the diagnosis and repairs described and agree to these terms. This order and your invoice make up the entire agreement.`];
+    return t.map(x => `<p>${esc(x)}</p>`).join('');
+  }
+  function pageHeader(o, label) {
+    const s = settings;
+    return `<div class="hd"><div><div class="biz">${esc(s.shop)}</div><div class="tag">${esc(s.tag)}</div><div class="sub">${esc([s.city, s.phone, s.email].filter(Boolean).join('   •   '))}   •   Mowers • Chainsaws • Generators • Welders • Powersports</div></div>
+      <div class="ro"><div class="t">${label}</div><div class="n">R.O. No. ${esc(fmtRO(o.ro))}</div><div class="d">Date in: ${esc(usDate(o.dateIn))}</div></div></div>`;
+  }
+  function page1(o) {
+    const s = settings; const diag = o.diagFee === '' ? s.fee : num(o.diagFee); const rate = o.taxRate !== '' ? num(o.taxRate) : num(s.tax);
+    const est = num(o.estParts) + num(o.estLabor) + Math.round(num(o.estParts) * rate) / 100 + num(o.pickupFee);
+    const auth = `I authorize repairs up to ${fmtMoney(o.authUpTo)} without further approval. Contact me by call or text before exceeding that amount.` + (o.arrival === 'Pickup / Delivery' && num(o.pickupFee) > 0 ? `  Includes a pickup / delivery fee of ${fmtMoney(o.pickupFee)}.` : '');
+    const idc = o.idChecked === 'Yes' ? '☒ Yes   ☐ No' : o.idChecked === 'No' ? '☐ Yes   ☒ No' : '☐ Yes   ☐ No   (not required)';
+    return `<div class="page">${pageHeader(o, 'REPAIR ORDER')}
+      <h3>Customer</h3><div class="g c3">${fld('Customer name', o.customer)}${fld('Phone (call / text)', o.phone)}${fld('Email', o.email)}</div>
+      <div class="g c2" style="margin-top:6px">${fld('Address', o.address)}${fld('Photo ID checked (motorcycles / ATVs / UTVs)', idc)}</div>
+      <h3>Equipment</h3><div class="g c5">${fld('Type', o.type)}${fld('Make', o.make)}${fld('Model', o.model, 'mono')}${fld('Serial No. / VIN', o.serial, 'mono')}${fld('Hours / miles', o.hours)}</div>
+      <div class="g c3" style="margin-top:6px">${fld('Engine', engineText(o))}${fld('Date of manufacture', o.dom)}${fld('Arrival', o.arrival)}</div>
+      <div class="g c2" style="margin-top:6px">${fld('Accessories & items received', o.accessories, 'tall')}${fld('Condition at intake', o.condition, 'tall')}</div>
+      <h3>Customer's description of the problem / work requested</h3><div class="fld"><div class="v tall">${esc(o.problem)}</div></div>
+      <h3>Estimate &amp; authorization</h3>
+      <div class="g c4">${fld('Diagnostic fee (credited to repair)', fmtMoney(diag), 'money')}${fld('Estimated parts', fmtMoney(o.estParts), 'money')}${fld('Estimated labor', fmtMoney(o.estLabor), 'money')}${fld('Estimated total (incl. tax on parts' + (num(o.pickupFee) ? ' & pickup / delivery' : '') + ')', fmtMoney(est), 'money')}</div>
+      <div class="auth">${esc(auth)}</div>
+      <div class="auth">${ck(o.arrival === 'Drop-off')} Customer drop-off     ${ck(o.arrival === 'Pickup / Delivery')} Pickup / delivery     ${ck(o.arrival === 'Onsite')} Onsite repair${o.pickupAddress ? '      Address: ' + esc(o.pickupAddress) : ''}${num(o.deposit) ? '      Deposit received: ' + fmtMoney(o.deposit) : ''}</div>
+      <div class="sigrow"><div><div class="fld"><div class="k">Customer signature (authorizes the work above; accepts the Terms &amp; Conditions below)</div></div><div class="sigbox">${o.signature ? `<img src="${o.signature}" alt="Customer signature">` : '<span class="x">×</span>'}</div></div><div>${fld('Date', o.signature ? usDate(o.sigDate) : '')}</div></div>
+      <h3>Terms &amp; conditions</h3><div class="terms">${termsHTML(s)}</div>
+      <div class="foot">${esc(s.shop)}   •   ${esc(s.phone)}   •   Keep this copy. Page 2 (work performed and invoice) is provided at pickup.</div><div class="pageno">Repair Order ${esc(fmtRO(o.ro))} · page 1 of 2</div></div>`;
+  }
+  function page2(o) {
+    const s = settings; const jps = jobParts(o.id); const inv = invoice(o, jps);
+    const rows = jps.map(p => `<tr><td class="n">${esc(String(num(p.qty)))}</td><td class="mono">${esc(p.partNo)}</td><td>${esc(p.description)}</td><td>${esc(p.status)}</td><td class="n">${fmtMoney(p.unitSell)}</td><td class="n">${partActive(p) ? fmtMoney(num(p.qty) * num(p.unitSell)) : '$0.00'}</td></tr>`).join('');
+    const paid = `${ck(o.payment === 'Cash')} Cash    ${ck(o.payment === 'Card')} Card    ${ck(o.payment === 'Check')} Check    ${ck(o.payment === 'Other')} Other${o.datePicked ? '      Date: ' + usDate(o.datePicked) : ''}`;
+    return `<div class="page">${pageHeader(o, 'INVOICE')}
+      <div class="auth" style="margin:0 0 4px"><b>Customer:</b> ${esc(o.customer)}   •   ${esc(o.phone)}   •   ${esc(equipText(o).replace(/ · /g, ' — '))}   •   S/N ${esc(o.serial)}</div>
+      <h3>Repairs performed — detailed write-up</h3><div class="fld"><div class="v tall" style="min-height:70pt">${esc(o.work)}</div></div>
+      <h3>Parts replaced</h3><table><thead><tr><th class="n">Qty</th><th>Part No.</th><th>Description</th><th>Status</th><th class="n">Unit price</th><th class="n">Line total</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="color:#6B7280">No parts</td></tr>'}<tr class="total"><td colspan="5">PARTS TOTAL  (cancelled / returned lines not charged)</td><td class="n">${fmtMoney(inv.partsSell)}</td></tr></tbody></table>
+      <h3>Labor &amp; other charges</h3><table><tbody><tr><td>Labor (see write-up above)</td><td class="n">${fmtMoney(inv.labor)}</td></tr><tr><td>Other charges (fuel disposal, storage, pickup / delivery)${num(o.pickupFee) ? ' — includes pickup / delivery ' + fmtMoney(o.pickupFee) : ''}</td><td class="n">${fmtMoney(inv.other)}</td></tr></tbody></table>
+      <h3>Totals</h3><div class="totals">${fld('Parts', fmtMoney(inv.partsSell))}${fld('Labor', fmtMoney(inv.labor))}${fld('Other', fmtMoney(inv.other))}${fld(`Sales tax (${inv.rate}% on parts)`, fmtMoney(inv.tax))}${fld('Invoice total', fmtMoney(inv.total))}${fld('Deposit', fmtMoney(inv.deposit))}<div class="fld due"><div class="k">Balance due</div><div class="v">${fmtMoney(inv.balance)}</div></div></div>
+      <h3>Payment &amp; release</h3><div class="g c2">${fld('Paid', paid)}${fld('Released to (print & sign)', o.releasedTo)}</div>
+      <div class="auth" style="margin-top:10px;font-size:8.5pt">Labor is guaranteed for ${esc(String(s.warranty))} days from pickup or delivery; parts carry the manufacturer's warranty only. See the Terms &amp; Conditions on your Repair Order.</div>
+      <div class="foot">Thank you for your business.   ${esc(s.shop)}   •   ${esc(s.phone)}</div><div class="pageno">Repair Order ${esc(fmtRO(o.ro))} · page 2 of 2</div></div>`;
+  }
+  function showPrint(which) {
+    const o = { ...collect(), id: cur.id, signature: sigData, sigDate: (jobs.find(j => j.id === cur.id) || {}).sigDate || todayISO() };
+    $('printPages').innerHTML = (which === 'invoice' ? '' : page1(o)) + (which === 'ro' ? '' : page2(o));
+    $('printMsg').textContent = IN_CLAUDE ? 'Preview only here. Printing and Save to PDF work from the installed app (see Setup).' : 'Letter size. Use Print, or Save to PDF from the share sheet.';
+    $('btnDoPrint').hidden = IN_CLAUDE; $('printView').classList.add('on'); document.body.style.overflow = 'hidden';
+  }
+  $('btnPrint').onclick = () => actionSheet('Print', [['Repair Order — page 1 (sign at intake)', '', () => { closeSheet(); showPrint('ro'); }], ['Invoice — page 2 (at pickup)', '', () => { closeSheet(); showPrint('invoice'); }], ['Both pages', '', () => { closeSheet(); showPrint('both'); }]]);
+  $('btnDoPrint').onclick = () => { try { window.print(); } catch (e) { toast('Printing is not available here'); } };
+  $('btnClosePrint').onclick = () => { $('printView').classList.remove('on'); document.body.style.overflow = ''; };
+
+  // ======================================================================
+  // Messages to the customer
+  // ======================================================================
+  $('btnMessage').onclick = () => {
+    const o = { ...collect(), id: cur.id }; const inv = invoice(o); const s = settings; const fn = firstName(o.customer) || 'there'; const eq = [o.make, o.model].filter(Boolean).join(' ') || 'equipment';
+    const short = $('shopName').textContent;
+    const rate = o.taxRate !== '' ? num(o.taxRate) : num(s.tax); const est = num(o.estParts) + num(o.estLabor) + Math.round(num(o.estParts) * rate) / 100 + num(o.pickupFee);
+    const msgs = [
+      ['Checked in', `Hi ${fn}, ${short} here. We've checked in your ${eq} as R.O. ${fmtRO(o.ro)}. We'll call or text with a diagnosis and estimate. Questions: ${s.phone}.`],
+      ['Estimate — needs approval', `Hi ${fn}, ${short} here about your ${eq} (R.O. ${fmtRO(o.ro)}). Estimate: parts ${fmtMoney(o.estParts)}, labor ${fmtMoney(o.estLabor)}${num(o.pickupFee) ? ', pickup/delivery ' + fmtMoney(o.pickupFee) : ''}, about ${fmtMoney(est)} total with tax on parts. Reply YES to approve, or call ${s.phone} with questions.`],
+      ['Ready for pickup', `Hi ${fn}, your ${eq} is ready at ${short}. Balance due ${fmtMoney(inv.balance)} (cash or card). Reply or call ${s.phone} to arrange pickup.${o.arrival === 'Pickup / Delivery' ? ' We can deliver it back to you as arranged.' : ''}`],
+    ];
+    const card = openSheet(`<h3>Text to ${esc(o.customer || 'customer')}</h3><div class="btnrow" id="m_tabs" style="margin-bottom:8px">${msgs.map((m, i) => `<button type="button" class="chip" data-i="${i}" aria-pressed="${i === (o.status === 'Done - Call Customer' ? 2 : o.status === 'Waiting on Approval' ? 1 : 0)}">${esc(m[0])}</button>`).join('')}</div><textarea class="out" id="m_text" style="min-height:110px;font-family:var(--font-body);font-size:15px"></textarea><div class="acts"></div>`);
+    const ta = card.querySelector('#m_text'); const pick = i => { ta.value = msgs[i][1]; card.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(+c.dataset.i === i))); };
+    pick(+card.querySelector('.chip[aria-pressed="true"]').dataset.i); card.querySelectorAll('.chip').forEach(c => c.onclick = () => pick(+c.dataset.i));
+    const box = card.querySelector('.acts'); const mk = (label, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.onclick = fn; box.appendChild(b); return b; };
+    if (!IN_CLAUDE && digits(o.phone)) mk('Open in Messages', 'primary', () => { location.href = `sms:${digits(o.phone)}&body=${encodeURIComponent(ta.value)}`; });
+    mk('Copy text', IN_CLAUDE ? 'primary' : '', async () => toast((await copyText(ta.value)) ? 'Copied' : 'Copy failed'));
+    mk('Close', 'quiet', closeSheet);
+  };
+
+  // ======================================================================
+  // Exports: workbook CSVs, legacy TSV row, backup / restore
+  // ======================================================================
+  const csvCell = v => { const s = String(v ?? ''); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const tsvCell = v => String(v ?? '').replace(/\t/g, ' ').replace(/\r?\n+/g, ' / ').trim();
+  const RO_HEADERS = ['R.O. #', 'Date In', 'Customer', 'Phone', 'Email', 'Address', 'Equipment Type', 'Make', 'Model', 'Serial / VIN', 'Date of Manufacture', 'Engine', 'Hours / Miles', 'Accessories Received', 'Condition at Intake', 'ID Checked', "Problem (customer's words)", 'Arrival', 'Pickup / Delivery Address', 'Diagnostic Fee $', 'Est. Parts $', 'Est. Labor $', 'Authorized Up To $', 'Status', 'Promised Date', 'Work Performed', 'Labor $', 'Other Charges $', 'Tax Rate (override)', 'Deposit $', 'Date Done', 'Date Picked Up', 'Payment Method'];
+  function roRow(o) { const oc = otherCharges(o); return [o.ro, usDate(o.dateIn), o.customer, o.phone, o.email, o.address, o.type, o.make, o.model, o.serial, o.dom, engineText(o), o.hours, o.accessories, o.condition, o.idChecked, o.problem, o.arrival, o.pickupAddress, money(o.diagFee), money(o.estParts), money(o.estLabor), money(o.authUpTo), o.status, usDate(o.promised), o.work, money(o.labor), oc === null ? '' : money(oc), o.taxRate === '' ? '' : o.taxRate + '%', money(o.deposit), usDate(o.dateDone), usDate(o.datePicked), o.payment]; }
+  function roRowText(o) { return `R.O. ${fmtRO(o.ro)} · ${o.customer}\n\nRepair Orders row — paste into column A of a blank row (fills A through AG):\n${roRow(o).map(tsvCell).join('\t')}` + (o.notes ? `\n\nNotes (column AO): ${o.notes}` : ''); }
+  const PART_HEADERS = ['Date Ordered', 'R.O. #', 'Customer', 'Equipment', 'Part #', 'Description', 'Qty', 'Supplier', 'Supplier Order #', 'Unit Cost $', 'Line Cost $', 'Unit Sell $', 'Line Sell $', 'Status', 'Expected Date', 'Received Date', 'Days Waiting', 'Notes'];
+  function partRow(p) { const j = jobs.find(x => x.id === p.jobId) || {}; const days = p.dateOrdered && !partNeeded(p) ? (partOnOrder(p) ? daysBetween(p.dateOrdered, todayISO()) : (p.received ? daysBetween(p.dateOrdered, p.received) : '')) : ''; return [usDate(p.dateOrdered), j.ro || '', j.customer || '', [j.make, j.model].filter(Boolean).join(' '), p.partNo, p.description, p.qty, p.supplier, p.supplierOrderNo, money(p.unitCost), money(num(p.qty) * num(p.unitCost)), money(p.unitSell), money(num(p.qty) * num(p.unitSell)), p.status, usDate(p.expected), usDate(p.received), days, p.notes]; }
+  const STOCK_HEADERS = ['Date Ordered', 'Part #', 'Description', 'Qty', 'Supplier', 'Supplier Order #', 'Unit Cost $', 'Line Cost $', 'Unit Sell $', 'Status', 'Expected Date', 'Received Date', 'Days Waiting', 'Notes', 'Min to Keep (optional)'];
+  function stockRow(l) { const open = l.status === 'Ordered' || l.status === 'Backordered'; const days = l.date ? (open ? daysBetween(l.date, todayISO()) : (l.received ? daysBetween(l.date, l.received) : '')) : ''; return [usDate(l.date), l.partNo, l.description, l.qty, l.supplier, l.supplierOrderNo, money(l.unitCost), money(num(l.qty) * num(l.unitCost)), money(l.unitSell), l.status, usDate(l.expected), usDate(l.received), days, l.notes, l.minKeep]; }
+  const csv = (headers, rows) => [headers.map(csvCell).join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\r\n');
+
+  async function saveFile(name, data, mime, title) {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+    if (IN_CLAUDE) {
+      let dl = null; try { if (window.claude && typeof window.claude.use === 'function') dl = await Promise.race([window.claude.use('downloads'), new Promise(r => setTimeout(() => r(null), 3000))]); } catch (e) {}
+      if (dl) { try { await dl.save({ filename: name, data: blob }); toast('Saved'); return true; } catch (e) { if (e && e.code === 'declined') return false; } }
+      if (typeof data === 'string') { textSheet(title || name, data); return false; }
+      toast('Saving files is not available in this preview; use the installed app'); return false;
+    }
+    const extra = [];
+    try { const file = new File([blob], name, { type: mime }); if (navigator.canShare && navigator.canShare({ files: [file] })) extra.push(['Share / Save to Files…', 'primary', () => navigator.share({ files: [file], title: name }).catch(() => {})]); } catch (e) {}
+    extra.push(['Download', extra.length ? '' : 'primary', () => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000); }]);
+    const card = openSheet(`<h3>${esc(title || name)}</h3><p class="note">${esc(name)} · ${(blob.size / 1024).toFixed(0)} KB</p><div class="acts"></div>`); const box = card.querySelector('.acts');
+    for (const [l, cls, fn] of extra) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = l; b.onclick = fn; box.appendChild(b); }
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'btn quiet'; c.textContent = 'Close'; c.onclick = closeSheet; box.appendChild(c);
+    return true;
+  }
+  $('btnExportRO').onclick = () => saveFile(`repair-orders-${todayISO()}.csv`, csv([...RO_HEADERS, 'Notes'], [...jobs].sort((a, b) => (a.ro || '').localeCompare(b.ro || '')).map(o => [...roRow(o), o.notes])), 'text/csv', 'Repair Orders CSV');
+  $('btnExportParts').onclick = () => saveFile(`parts-orders-${todayISO()}.csv`, csv(PART_HEADERS, [...parts].sort((a, b) => (a.dateOrdered || '').localeCompare(b.dateOrdered || '')).map(partRow)), 'text/csv', 'Parts Orders CSV');
+  $('btnExportStock').onclick = () => saveFile(`stock-orders-${todayISO()}.csv`, csv(STOCK_HEADERS, [...stock].sort((a, b) => (a.date || '').localeCompare(b.date || '')).map(stockRow)), 'text/csv', 'Stock Orders CSV');
+  $('btnBackup').onclick = async () => {
+    const data = JSON.stringify({ app: 'bond-shop-tracker', version: 2, exported: new Date().toISOString(), settings, jobs, parts, stock });
+    if (await saveFile(`bond-shop-backup-${todayISO()}.json`, data, 'application/json', 'Backup')) { settings.lastBackup = new Date().toISOString(); saveSettings(); updateStorage(); }
+  };
+  $('restoreFile').addEventListener('change', e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      let b; try { b = JSON.parse(rd.result); } catch (err) { toast('That file is not a backup'); return; }
+      if (!b || !Array.isArray(b.jobs)) { toast('That file is not a backup from this app'); return; }
+      b.parts = Array.isArray(b.parts) ? b.parts : []; b.stock = Array.isArray(b.stock) ? b.stock : [];
+      actionSheet(`Restore ${b.jobs.length} jobs, ${b.parts.length} part lines, ${b.stock.length} restock lines (${b.exported ? usDate(b.exported.slice(0, 10)) : 'date unknown'})`, [
+        ['Merge into what\'s here (keeps the newer copy of each)', 'primary', () => restore(b, false)],
+        ['Replace everything on this device', 'danger', () => restore(b, true)]]);
+    };
+    rd.readAsText(f);
+  });
+  async function restore(b, replace) {
+    closeSheet();
+    const merge = (cur, inc) => { const m = new Map(cur.map(x => [x.id, x])); for (const x of inc) { if (!x || !x.id) continue; const c = m.get(x.id); if (!c || (x.updated || '') >= (c.updated || '')) m.set(x.id, x); } return [...m.values()]; };
+    const nj = replace ? b.jobs : merge(jobs, b.jobs), np = replace ? b.parts : merge(parts, b.parts), ns = replace ? b.stock : merge(stock, b.stock);
+    if (replace) for (const s of STORES) await Store.clear(s);
+    await Data.saveMany('jobs', nj); await Data.saveMany('parts', np); await Data.saveMany('stock', ns);
+    jobs = nj; parts = np; stock = ns;
+    if (b.settings) { settings = { ...DEF_SETTINGS, ...b.settings, lastBackup: settings.lastBackup, updated: new Date().toISOString() }; saveSettings(); applySettings(); Sync.pushSettings(); }
+    renderList(); updateCounts(); updateStorage(); toast(`Restored · ${jobs.length} jobs`); if (isWide()) startNew(); else showDetail(false); if (view === 'stock') renderPartsTab(); Sync.reconnect();
+  }
+  let wipeArmed = false;
+  $('btnWipe').onclick = async () => {
+    if (!wipeArmed) { wipeArmed = true; $('btnWipe').textContent = `Tap again to delete ${jobs.length} jobs, ${parts.length} part lines and ${stock.length} restock lines`; setTimeout(() => { wipeArmed = false; $('btnWipe').textContent = 'Delete everything on this device'; }, 5000); return; }
+    for (const s of STORES) await Store.clear(s); jobs = []; parts = []; stock = []; wipeArmed = false; $('btnWipe').textContent = 'Delete everything on this device'; clearDraft();
+    renderList(); updateCounts(); updateStorage(); toast(Sync.on ? 'Deleted here · re-downloading the shared records' : 'Everything deleted'); startNew(); Sync.reconnect();
+  };
+  $('btnCopyPrompt').onclick = async () => toast((await copyText($('promptText').textContent)) ? 'Prompt copied' : 'Copy failed — select the text and copy it');
+  function updateStorage() {
+    $('storJobs').textContent = jobs.length; $('storParts').textContent = parts.length; $('storStock').textContent = stock.length;
+    $('storPhotos').textContent = jobs.reduce((n, j) => n + (j.photos ? j.photos.length : 0), 0);
+    const last = [...jobs, ...parts, ...stock].map(x => x.updated).filter(Boolean).sort().pop(); $('storLast').textContent = last ? new Date(last).toLocaleString('en-US') : '—';
+    $('storBackup').textContent = settings.lastBackup ? new Date(settings.lastBackup).toLocaleString('en-US') : 'never';
+    $('hostNote').textContent = IN_CLAUDE ? 'You are looking at the preview copy on claude.ai. Printing, file saving, sync and Messages links work from the installed copy; records entered here stay here.' : (SELF_HOSTED ? 'This copy is installed at ' + location.host + '. Records live on this device under this address.' : '');
+  }
+
+  // ======================================================================
+  // Sync between devices (optional; Firebase Firestore behind one shared key)
+  // ======================================================================
+  const Sync = (() => {
+    const SDK = '10.13.2'; let cfg = null, fs = null, root = null, unsubs = [], state = 'off', initialDone = {}, lastChange = '';
+    const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4))));
+    const encodeKey = k => 'BST1.' + b64u(JSON.stringify(k));
+    function decodeKey(text) { const m = /BST1\.([A-Za-z0-9_\-]+)/.exec(text || ''); if (!m) return null; try { const k = JSON.parse(unb64u(m[1])); if (k && typeof k.c === 'string' && k.c.length >= 20 && k.f && k.f.projectId && k.f.apiKey) return k; } catch (e) {} return null; }
+    function parseConfig(text) { const o = {}; for (const m of (text || '').matchAll(/([A-Za-z]+)\s*:\s*["']([^"']*)["']/g)) o[m[1]] = m[2]; return o.apiKey && o.projectId ? o : null; }
+    function newCode() { const a = new Uint8Array(18); crypto.getRandomValues(a); return b64u(String.fromCharCode(...a)).replace(/[^A-Za-z0-9]/g, 'x').slice(0, 24); }
+    function loadCfg() { try { cfg = JSON.parse(localStorage.getItem('shop-intake-sync') || 'null'); } catch (e) { cfg = null; } return cfg; }
+    function saveCfg(k) { cfg = k; try { if (k) localStorage.setItem('shop-intake-sync', JSON.stringify(k)); else localStorage.removeItem('shop-intake-sync'); } catch (e) {} }
+    const script = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    async function loadSDK() {
+      if (window.firebase && window.firebase.firestore) return;
+      for (const [base, ext] of [[`https://cdnjs.cloudflare.com/ajax/libs/firebase/${SDK}/`, '.min.js'], [`https://www.gstatic.com/firebasejs/${SDK}/`, '.js']]) {
+        try { for (const f of ['firebase-app-compat', 'firebase-auth-compat', 'firebase-firestore-compat']) await script(base + f + ext); if (window.firebase && window.firebase.firestore) return; } catch (e) {}
+      }
+      throw new Error('Could not load the sync library');
+    }
+    function setState(s, detail) { state = s; renderSyncUI(detail); }
+    const clean = (store, obj) => { const d = {}; for (const k of Object.keys(obj)) { if (obj[k] === undefined) continue; if (store === 'jobs' && k === 'photos') continue; d[k] = obj[k]; } return d; };
+    const local = store => store === 'jobs' ? jobs : store === 'parts' ? parts : stock;
+    const setLocal = (store, arr) => { if (store === 'jobs') jobs = arr; else if (store === 'parts') parts = arr; else stock = arr; };
+    const DBG = /debugsync/.test(location.search); const dlog = (...x) => { if (DBG) console.log('SYNC', ...x); };
+    function push(store, obj) { if (!root) return; dlog('push', store, obj.id, obj.updated, obj.labor); root.collection(store).doc(obj.id).set(clean(store, obj)).catch(e => setState('error', e)); }
+    function pushMany(store, arr) { if (!root) return; dlog('pushMany', store, arr.map(o => o.id + '@' + o.updated)); for (let i = 0; i < arr.length; i += 400) { const batch = fs.batch(); for (const o of arr.slice(i, i + 400)) batch.set(root.collection(store).doc(o.id), clean(store, o)); batch.commit().catch(e => setState('error', e)); } }
+    function remove(store, id) { if (!root) return; root.collection(store).doc(id).delete().catch(e => setState('error', e)); }
+    function pushSettings() { if (!root) return; const s = { ...settings }; delete s.lastBackup; root.collection('meta').doc('settings').set(s).catch(e => setState('error', e)); }
+    async function handleSnapshot(store, snap) {
+      const touched = [];
+      for (const ch of snap.docChanges()) {
+        dlog('change', store, ch.type, ch.doc.id, ch.doc.metadata.hasPendingWrites, JSON.stringify((ch.doc.data() || {}).updated), JSON.stringify((ch.doc.data() || {}).labor));
+        if (ch.doc.metadata.hasPendingWrites) continue;                       // echo of this device's own write
+        const id = ch.doc.id; const cur_ = local(store); const l = cur_.find(x => x.id === id);
+        if (ch.type === 'removed') { if (l) { await Store.del(store, id); setLocal(store, cur_.filter(x => x.id !== id)); touched.push(id); } continue; }
+        const r = ch.doc.data(); if (!r || !r.id) continue;
+        if (!l || (r.updated || '') > (l.updated || '')) {
+          const obj = store === 'jobs' ? { ...r, photos: l ? (l.photos || []) : [] } : { ...r };
+          await Store.put(store, obj); setLocal(store, [...cur_.filter(x => x.id !== id), obj]); touched.push(id);
+        } else if ((l.updated || '') > (r.updated || '')) push(store, l);       // this device has the newer copy
+      }
+      if (!initialDone[store] && !snap.metadata.fromCache) {
+        initialDone[store] = true; const remoteIds = new Set(snap.docs.map(d => d.id));
+        const mine = local(store).filter(x => !remoteIds.has(x.id)); if (mine.length) pushMany(store, mine);
+      }
+      if (touched.length) { lastChange = new Date().toISOString(); onRemoteChange(store, touched); }
+      if (state !== 'error') setState(navigator.onLine === false ? 'offline' : 'on');
+    }
+    async function connect() {
+      if (!cfg || IN_CLAUDE) return; disconnect(false); setState('connecting');
+      try {
+        await loadSDK(); const fb = window.firebase;
+        if (!fb.apps.length) fb.initializeApp(cfg.f);
+        await fb.auth().signInAnonymously();
+        fs = fb.firestore(); try { await fs.enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+        root = fs.collection('shops').doc(cfg.c); initialDone = {};
+        unsubs.push(root.collection('meta').doc('settings').onSnapshot(snap => {
+          if (snap.metadata.hasPendingWrites) return; const d = snap.data();
+          if (d && (d.updated || '') > (settings.updated || '')) { settings = { ...DEF_SETTINGS, ...d, lastBackup: settings.lastBackup }; saveSettings(); applySettings(); }
+          else if (!d && !snap.metadata.fromCache) pushSettings();
+        }, e => setState('error', e)));
+        for (const s of STORES) unsubs.push(root.collection(s).onSnapshot(snap => { handleSnapshot(s, snap); }, e => setState('error', e)));
+      } catch (e) { setState('error', e); }
+    }
+    function disconnect(forget) { unsubs.forEach(u => { try { u(); } catch (e) {} }); unsubs = []; root = null; initialDone = {}; if (forget) { saveCfg(null); setState('off'); } }
+    function reconnect() { if (cfg && !IN_CLAUDE) connect(); }
+    window.addEventListener('online', () => { if (cfg) setState('on'); }); window.addEventListener('offline', () => { if (cfg) setState('offline'); });
+    return { get on() { return !!cfg; }, get state() { return state; }, get cfg() { return cfg; }, get lastChange() { return lastChange; }, loadCfg, saveCfg, encodeKey, decodeKey, parseConfig, newCode, connect, disconnect, reconnect, push, pushMany, remove, pushSettings };
+  })();
+  function onRemoteChange(store, ids) {
+    updateCounts(); if (view === 'jobs') renderList(); if (view === 'stock') renderPartsTab(); if (view === 'dash') renderDash(); if (view === 'setup') updateStorage();
+    if (store === 'parts') { renderParts(); updateInvoice(); }
+    if (store === 'jobs' && dupROs().size) toast('Two jobs share an R.O. number — see the red one in the list');
+    if (store === 'jobs' && cur.saved && ids.includes(cur.id)) {
+      if (jobs.some(j => j.id === cur.id)) { if (loadDraft()) $('remoteNote').hidden = false; else { const keepScans = [$('scanEquip').value, $('scanEngine').value]; openJob(cur.id); [$('scanEquip').value, $('scanEngine').value] = keepScans; toast('Updated from another device'); } }
+      else { toast('This job was deleted on another device'); showDetail(false); if (isWide()) startNew(); }
+    }
+  }
+  $('btnRemoteReload').onclick = () => { $('remoteNote').hidden = true; openJob(cur.id); };
+  function renderSyncUI(detail) {
+    const st = Sync.state, on = Sync.on; const dot = $('syncDot');
+    dot.className = 'dot ' + (st === 'on' ? 'on' : st === 'connecting' || st === 'offline' ? 'wait' : st === 'error' ? 'err' : '');
+    const label = { off: 'off', connecting: 'connecting…', on: 'on', offline: 'offline — will catch up', error: 'problem' }[st] || st;
+    dot.title = 'Sync ' + label; $('syncStatus').textContent = label + (st === 'error' && detail ? ': ' + (detail.message || detail.code || String(detail)).slice(0, 120) : '');
+    $('syncOff').hidden = on; $('syncOn').hidden = !on;
+    if (on) { $('syncProject').textContent = Sync.cfg.f.projectId; $('syncKeyOut').value = Sync.encodeKey(Sync.cfg); $('syncLast').textContent = Sync.lastChange ? 'Last change received ' + new Date(Sync.lastChange).toLocaleString('en-US') + '.' : 'No changes received from other devices yet.'; }
+    if (IN_CLAUDE) { $('syncStatus').textContent = 'works in the installed copy, not in this preview'; $('btnSyncConnect').disabled = true; $('btnSyncGenerate').disabled = true; }
+  }
+  $('btnSyncCreate').onclick = () => { $('syncCreate').hidden = !$('syncCreate').hidden; };
+  $('btnCopyRules').onclick = async () => toast((await copyText($('rulesText').textContent)) ? 'Rules copied' : 'Copy failed — select the text and copy it');
+  $('btnSyncConnect').onclick = () => { const k = Sync.decodeKey($('syncKeyIn').value); if (!k) { toast('That is not a sync key. It starts with BST1.'); return; } Sync.saveCfg(k); $('syncKeyIn').value = ''; Sync.connect(); toast('Connecting…'); };
+  $('btnSyncGenerate').onclick = () => { const f = Sync.parseConfig($('fbConfigIn').value); if (!f) { toast('Paste the whole firebaseConfig block, with apiKey and projectId'); return; } Sync.saveCfg({ c: Sync.newCode(), f }); $('fbConfigIn').value = ''; $('syncCreate').hidden = true; Sync.connect(); toast('Key created · connecting…'); };
+  $('btnSyncCopy').onclick = async () => toast((await copyText($('syncKeyOut').value)) ? 'Key copied — paste it on the other device' : 'Copy failed — select the text and copy it');
+  let syncOffArmed = false;
+  $('btnSyncOff').onclick = () => { if (!syncOffArmed) { syncOffArmed = true; $('btnSyncOff').textContent = 'Tap again to turn off (records stay on this device)'; setTimeout(() => { syncOffArmed = false; $('btnSyncOff').textContent = 'Turn off sync on this device'; }, 5000); return; } syncOffArmed = false; $('btnSyncOff').textContent = 'Turn off sync on this device'; Sync.disconnect(true); toast('Sync off on this device'); };
+
+  // ======================================================================
+  // Toast + boot
+  // ======================================================================
+  let toastTimer = null;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2800); }
+
+  async function start(hot) {
+    loadSettings(); applySettings(); platformHints();
+    try { [jobs, parts, stock] = await Promise.all([Store.all('jobs'), Store.all('parts'), Store.all('stock')]); } catch (e) { jobs = []; parts = []; stock = []; }
+    const d = (hot && hot.draft) || loadDraft();
+    if (d && d.form && d.cur) {
+      cur = { id: d.cur.id || uid(), saved: !!d.cur.saved && jobs.some(j => j.id === d.cur.id) };
+      const j = cur.saved ? jobs.find(x => x.id === cur.id) : null; photos = j ? (j.photos || []).slice() : [];
+      fill({ ...(j || {}), ...d.form, signature: (j && j.signature) || '', sigDate: j && j.sigDate }); $('scanEquip').value = d.scanEquip || ''; $('scanEngine').value = d.scanEngine || '';
+      if (d.form.ro) $('ro').dataset.touched = '1';
+      showDetail(true);
+    } else { cur = { id: uid(), saved: false }; fill(blank()); showDetail(isWide()); }
+    renderList(); updateCounts(); updateStorage(); showView((hot && hot.view) || 'jobs');
+    Sync.loadCfg(); renderSyncUI(); if (Sync.on) Sync.connect();
+    if (SELF_HOSTED && 'serviceWorker' in navigator) { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {} }
+  }
+  if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === 'function') {
+    try { window.claude.hot.snapshot(() => ({ draft: { cur, form: collect(), scanEquip: $('scanEquip').value, scanEngine: $('scanEngine').value }, view })); } catch (e) {}
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.ready === 'function') hot.ready(start); else start((hot && hot.data) || {});
+})();
+
+</script>
+</body></html>
