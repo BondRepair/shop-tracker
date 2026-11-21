@@ -1,8 +1,8 @@
 {
  "app": "bond-shop-tracker",
  "version": 2,
- "exported": "2026-11-20T19:13:19.066868Z",
- "source": "Bond_Shop_Tracker_9.xlsx",
+ "exported": "2026-11-21T02:38:31.873391Z",
+ "source": "Bond_Shop_Tracker_8.xlsx",
  "settings": {
   "shop": "Bond Small Engine Repair and Services, LLC",
   "tag": "Small Engines. Big Problems. Fixed.",
@@ -62,8 +62,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026090002",
@@ -77,7 +77,7 @@
    "make": "John Deer",
    "model": "Z915E 54\"",
    "serial": "1TC915EVVHT054274",
-   "dom": "2017-07-26 00:00:00",
+   "dom": "2017-07-26",
    "engineMake": "",
    "engineModel": "",
    "engineSerial": "",
@@ -108,8 +108,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026090003",
@@ -123,7 +123,7 @@
    "make": "Cub Cadet",
    "model": "RZJL 46\" Model # 17AGCACN056",
    "serial": "1F198H10152",
-   "dom": "2018-06-01 00:00:00",
+   "dom": "2018-06-01",
    "engineMake": "Honda",
    "engineModel": "Euro 2 630",
    "engineSerial": "",
@@ -154,8 +154,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026090004",
@@ -169,7 +169,7 @@
    "make": "Cub Cadet",
    "model": "17RREAC5010",
    "serial": "1K130H10159",
-   "dom": "2020-11-01 00:00:00",
+   "dom": "2020-11-01",
    "engineMake": "Kohler",
    "engineModel": "7000 Series 22hp",
    "engineSerial": "1TC915EVVHT054274",
@@ -200,8 +200,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026090005",
@@ -246,8 +246,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100001",
@@ -263,7 +263,7 @@
    "serial": "",
    "dom": "",
    "engineMake": "Briggs & Stratton",
-   "engineModel": "8 HP  1136 E1 Model #192432",
+   "engineModel": "8 HP 1136 E1 Model #192432",
    "engineSerial": "990630YD",
    "hours": "",
    "accessories": "",
@@ -292,8 +292,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100002",
@@ -338,8 +338,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100003",
@@ -384,8 +384,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100004",
@@ -415,7 +415,7 @@
    "estParts": "",
    "estLabor": "",
    "authUpTo": "",
-   "status": "Ready to Work",
+   "status": "Waiting on Parts",
    "promised": "",
    "work": "Replaced solenoid,",
    "labor": "",
@@ -426,12 +426,12 @@
    "datePicked": "",
    "payment": "",
    "releasedTo": "",
-   "notes": "Needs new starter",
+   "notes": "Needs new starter; starter ordered 11/4/2026",
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100005",
@@ -476,8 +476,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100006",
@@ -491,7 +491,7 @@
    "make": "Cub Cadet",
    "model": "RZJL 46\" Model # 17AGCACN056",
    "serial": "1F198H10152",
-   "dom": "2018-06-01 00:00:00",
+   "dom": "2018-06-01",
    "engineMake": "Honda",
    "engineModel": "Euro 2 630",
    "engineSerial": "",
@@ -522,8 +522,8 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-2026100007",
@@ -537,7 +537,7 @@
    "make": "John Deere",
    "model": "Z915E 54\"",
    "serial": "1TC915EVVHT054274",
-   "dom": "2017-07-26 00:00:00",
+   "dom": "2017-07-26",
    "engineMake": "",
    "engineModel": "",
    "engineSerial": "",
@@ -568,8 +568,54 @@
    "photos": [],
    "signature": "",
    "sigDate": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-2026110001",
+   "ro": "2026110001",
+   "dateIn": "2026-11-04",
+   "customer": "Self",
+   "phone": "",
+   "email": "",
+   "address": "",
+   "type": "Other",
+   "make": "Chevy",
+   "model": "3500 HD",
+   "serial": "",
+   "dom": "2007",
+   "engineMake": "",
+   "engineModel": "",
+   "engineSerial": "",
+   "hours": "",
+   "accessories": "",
+   "condition": "",
+   "idChecked": "N/A",
+   "problem": "",
+   "arrival": "",
+   "pickupAddress": "",
+   "diagFee": "",
+   "pickupFee": "",
+   "estParts": "",
+   "estLabor": "",
+   "authUpTo": "",
+   "status": "Waiting on Parts",
+   "promised": "",
+   "work": "",
+   "labor": "",
+   "other": "",
+   "taxRate": "",
+   "deposit": "",
+   "dateDone": "",
+   "datePicked": "",
+   "payment": "",
+   "releasedTo": "",
+   "notes": "Taxes ($11.23) and Tags ($55)",
+   "photos": [],
+   "signature": "",
+   "sigDate": "",
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   }
  ],
  "parts": [
@@ -581,15 +627,15 @@
    "description": "Ignition switch",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "112-7520398-8950628",
    "unitCost": 18.59,
    "unitSell": "",
    "status": "Installed",
    "expected": "2026-09-26",
    "received": "2026-09-26",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p5",
@@ -606,8 +652,8 @@
    "expected": "",
    "received": "2026-10-05",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p6",
@@ -624,8 +670,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p7",
@@ -642,8 +688,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p8",
@@ -660,8 +706,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p9",
@@ -678,8 +724,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p10",
@@ -689,24 +735,24 @@
    "description": "Ignition switch",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "112-7520398-8950628",
    "unitCost": 11.99,
    "unitSell": 20,
    "status": "Installed",
    "expected": "2026-09-26",
    "received": "2026-09-26",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p11",
    "jobId": "wb-2026100001",
    "dateOrdered": "",
-   "partNo": "",
+   "partNo": "691035",
    "description": "Fuel Filter",
    "qty": 1,
-   "supplier": "Amazon",
+   "supplier": "Shop Stock",
    "supplierOrderNo": "",
    "unitCost": 1.99,
    "unitSell": 5,
@@ -714,8 +760,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p12",
@@ -725,15 +771,15 @@
    "description": "Air Filter",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "114-4630369-0006637",
    "unitCost": 3.99,
    "unitSell": 3.99,
    "status": "Installed",
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p13",
@@ -750,8 +796,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p14",
@@ -768,8 +814,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p15",
@@ -779,15 +825,15 @@
    "description": "Recoil Pull Starter",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "111-0567811-6321832",
    "unitCost": 21.85,
    "unitSell": 21.85,
    "status": "Installed",
    "expected": "2026-10-14",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p16",
@@ -797,15 +843,15 @@
    "description": "Air Filter",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "114-4630369-0006637",
    "unitCost": 3.99,
    "unitSell": 5,
    "status": "Installed",
    "expected": "2026-10-16",
    "received": "2026-10-16",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p17",
@@ -822,17 +868,17 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p18",
    "jobId": "wb-2026100002",
    "dateOrdered": "",
-   "partNo": "",
+   "partNo": "691035",
    "description": "Fuel Filter",
    "qty": 1,
-   "supplier": "Walmart",
+   "supplier": "Shop Stock",
    "supplierOrderNo": "",
    "unitCost": 1.99,
    "unitSell": 5,
@@ -840,8 +886,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p19",
@@ -858,8 +904,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p20",
@@ -876,8 +922,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p21",
@@ -894,8 +940,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p22",
@@ -912,8 +958,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p23",
@@ -930,8 +976,8 @@
    "expected": "",
    "received": "",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p24",
@@ -941,15 +987,15 @@
    "description": "12V Mower Starter Solenoid",
    "qty": 1,
    "supplier": "Amazon",
-   "supplierOrderNo": "",
+   "supplierOrderNo": "114-4630369-0006637",
    "unitCost": 9.98,
    "unitSell": "",
    "status": "Installed",
    "expected": "2026-10-16",
    "received": "2026-10-16",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p25",
@@ -958,7 +1004,7 @@
    "partNo": "691035",
    "description": "1/4 Fuel Filter",
    "qty": 1,
-   "supplier": "Amazon",
+   "supplier": "Shop Stock",
    "supplierOrderNo": "",
    "unitCost": 1.99,
    "unitSell": 1.99,
@@ -966,8 +1012,8 @@
    "expected": "2026-10-16",
    "received": "2026-10-16",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p26",
@@ -984,8 +1030,8 @@
    "expected": "",
    "received": "2026-10-05",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p27",
@@ -1002,8 +1048,8 @@
    "expected": "2026-10-09",
    "received": "2026-10-09",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   },
   {
    "id": "wb-p28",
@@ -1020,14 +1066,86 @@
    "expected": "",
    "received": "2026-10-05",
    "notes": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-p29",
+   "jobId": "wb-2026100004",
+   "dateOrdered": "2026-11-04",
+   "partNo": "19169N",
+   "description": "BDELI Starter 19169N Premium",
+   "qty": 1,
+   "supplier": "Amazon",
+   "supplierOrderNo": "112-6486612-9732228",
+   "unitCost": 75.99,
+   "unitSell": "",
+   "status": "Installed",
+   "expected": "2026-11-06",
+   "received": "",
+   "notes": "",
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-p30",
+   "jobId": "wb-2026110001",
+   "dateOrdered": "",
+   "partNo": "8X 41-962",
+   "description": "Spark Plugs and Wires",
+   "qty": 1,
+   "supplier": "Shop Stock",
+   "supplierOrderNo": "",
+   "unitCost": 34.99,
+   "unitSell": 34.99,
+   "status": "Installed",
+   "expected": "",
+   "received": "",
+   "notes": "",
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-p31",
+   "jobId": "wb-2026110001",
+   "dateOrdered": "",
+   "partNo": "234-4337",
+   "description": "O2 Sensor",
+   "qty": 4,
+   "supplier": "Shop Stock",
+   "supplierOrderNo": "",
+   "unitCost": 12.42,
+   "unitSell": 49.68,
+   "status": "Installed",
+   "expected": "",
+   "received": "",
+   "notes": "",
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-p32",
+   "jobId": "wb-2026110001",
+   "dateOrdered": "",
+   "partNo": "2134160",
+   "description": "Mass Air Flow Sensor",
+   "qty": 1,
+   "supplier": "Shop Stock",
+   "supplierOrderNo": "",
+   "unitCost": 26.99,
+   "unitSell": 26.99,
+   "status": "Installed",
+   "expected": "",
+   "received": "",
+   "notes": "",
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   }
  ],
  "stock": [
   {
    "id": "wb-s4",
-   "date": "2026-11-18",
+   "date": "",
    "partNo": "691035",
    "description": "1/4 Fuel Filter",
    "qty": 4,
@@ -1037,11 +1155,83 @@
    "unitSell": 5,
    "status": "Received",
    "expected": "",
-   "received": "2026-11-18",
+   "received": "",
    "notes": "Count already on the shelf when tracking started (carried over from the old Shop Stock tab; usual supplier Amazon)",
    "minKeep": "",
-   "created": "2026-11-20T19:13:19.066868Z",
-   "updated": "2026-11-20T19:13:19.066868Z"
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-s5",
+   "date": "2026-10-23",
+   "partNo": "8X 41-962",
+   "description": "Spark Plugs and Wires",
+   "qty": 1,
+   "supplier": "Amazon",
+   "supplierOrderNo": "114-0296437-6230673",
+   "unitCost": 34.99,
+   "unitSell": 34.99,
+   "status": "Received",
+   "expected": "2026-10-27",
+   "received": "2026-10-27",
+   "notes": "",
+   "minKeep": 0,
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-s6",
+   "date": "2026-10-23",
+   "partNo": "234-4337",
+   "description": "O2 Sensor",
+   "qty": 4,
+   "supplier": "Amazon",
+   "supplierOrderNo": "114-0296437-6230673",
+   "unitCost": 12.42,
+   "unitSell": 49.68,
+   "status": "Received",
+   "expected": "2026-10-27",
+   "received": "2026-10-27",
+   "notes": "",
+   "minKeep": 0,
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-s7",
+   "date": "2026-10-23",
+   "partNo": "2134160",
+   "description": "Mass Air Flow Sensor",
+   "qty": 1,
+   "supplier": "Amazon",
+   "supplierOrderNo": "114-0296437-6230673",
+   "unitCost": 26.99,
+   "unitSell": 26.99,
+   "status": "Received",
+   "expected": "2026-10-27",
+   "received": "2026-10-27",
+   "notes": "",
+   "minKeep": 0,
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
+  },
+  {
+   "id": "wb-s8",
+   "date": "2026-11-04",
+   "partNo": "UF271",
+   "description": "Ignition Coil Pack",
+   "qty": 1,
+   "supplier": "Amazon",
+   "supplierOrderNo": "1114-4714295-86042",
+   "unitCost": 64.19,
+   "unitSell": 64.19,
+   "status": "Received",
+   "expected": "2026-11-06",
+   "received": "",
+   "notes": "",
+   "minKeep": 0,
+   "created": "2026-11-21T02:38:31.873391Z",
+   "updated": "2026-11-21T02:38:31.873391Z"
   }
  ]
 }

@@ -184,7 +184,23 @@ a.btn { text-decoration: none; }
 .line { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; text-align: left; width: 100%; color: inherit; }
 .line .l1 { font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .line .l1 .pn { font: 500 13px/1 var(--font-mono); color: var(--muted); }
+.line .l1 .pn.needpn, .line.row.needed .l1 .pn.needpn { font: 700 11px/1 var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border-radius: 4px; padding: 3px 5px; }
 .line .l2 { font-size: 13px; color: var(--muted); }
+/* field-friendly part sheet: quick picks, shelf picker, part photo, folded ordering details */
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick .chip { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.quick .chip.shelf { border-color: var(--accent); color: var(--accent-ink); }
+.shelfpick { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow: auto; margin-top: 8px; }
+.shelfpick button { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: inherit; font: 500 14px/1.3 var(--font-body); }
+.shelfpick button .pn { font: 500 13px/1 var(--font-mono); color: var(--muted); }
+.shelfpick button span:last-child { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.shelfpick button.zero { color: var(--faint); }
+.pphoto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pphoto .hint { font-size: 13px; color: var(--muted); flex: 1; min-width: 160px; }
+.pphoto .thumb { width: 72px; height: 72px; }
+.grid details.more { grid-column: 1 / -1; border-top: 1px dashed var(--line); padding-top: 10px; }
+.grid details.more summary { cursor: pointer; font: 600 13px/1.3 var(--font-body); color: var(--muted); }
+.grid details.more[open] summary { margin-bottom: 10px; }
 .line .amt { font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; white-space: nowrap; }
 .line .amt small { display: block; font-weight: 400; color: var(--faint); font-size: 12px; }
 .line.off .l1, .line.off .amt { color: var(--faint); text-decoration: line-through; }
@@ -600,19 +616,21 @@ pre.prompt { white-space: pre-wrap; background: var(--surface-2); border: 1px so
 
   <div class="sec">
     <h2>Backup &amp; export</h2>
-    <p class="note" style="margin:0 0 10px"><b>Everything lives on this device.</b> Back up once a week; keep the file in Google Drive, iCloud Drive or OneDrive, in a folder shared with whoever else should have a copy. Restoring a backup on another device brings everything across, photos included.</p>
+    <p class="note" id="backupNote" style="margin:0 0 10px"><b>Everything lives on this device.</b> Back up once a week; keep the file in Google Drive, iCloud Drive or OneDrive, in a folder shared with whoever else should have a copy. Restoring a backup on another device brings everything across, photos included.</p>
     <div class="btnrow">
       <button type="button" class="btn primary" id="btnBackup">Back up everything</button>
       <span class="btn filebtn">Restore from backup<input type="file" id="restoreFile" accept=".json,application/json" aria-label="Restore from a backup file"></span>
     </div>
     <div class="kv" style="margin-top:12px"><span class="k">Jobs</span><span id="storJobs">0</span><span class="k">Parts lines</span><span id="storParts">0</span><span class="k">Restock lines</span><span id="storStock">0</span><span class="k">Photos</span><span id="storPhotos">0</span><span class="k">Last saved</span><span id="storLast">—</span><span class="k">Last backup</span><span id="storBackup">never</span></div>
-    <h2 style="margin-top:16px">For the workbook <span class="sub">CSV in the tracker's column order</span></h2>
-    <div class="btnrow">
-      <button type="button" class="btn sm" id="btnExportRO">Repair Orders</button>
-      <button type="button" class="btn sm" id="btnExportParts">Parts Orders</button>
-      <button type="button" class="btn sm" id="btnExportStock">Stock Orders</button>
-    </div>
-    <p class="note" style="margin:8px 0 0">Open the CSV, copy the rows, paste into column A of the matching tab. Gray columns come across as values.</p>
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font:700 15px/1 var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">For the Excel workbook (optional) <span class="sub" style="font:500 12px/1.2 var(--font-body);letter-spacing:0;text-transform:none;color:var(--faint)">CSV in the tracker's column order</span></summary>
+      <div class="btnrow" style="margin-top:10px">
+        <button type="button" class="btn sm" id="btnExportRO">Repair Orders</button>
+        <button type="button" class="btn sm" id="btnExportParts">Parts Orders</button>
+        <button type="button" class="btn sm" id="btnExportStock">Stock Orders</button>
+      </div>
+      <p class="note" style="margin:8px 0 0">Only if you still keep the spreadsheet. Open the CSV, copy the rows, paste into column A of the matching tab. Gray columns come across as values.</p>
+    </details>
   </div>
 
   <div class="sec" id="syncSec">
@@ -939,7 +957,7 @@ const LabelParser = (() => {
     }
     const lsKey = s => 'shop-intake-' + s;
     const lsAll = s => { try { return JSON.parse(localStorage.getItem(lsKey(s)) || '[]'); } catch (e) { return []; } };
-    const lsSave = (s, arr) => { try { localStorage.setItem(lsKey(s), JSON.stringify(s === 'jobs' ? arr.map(j => ({ ...j, photos: [], signature: '' })) : arr)); return true; } catch (e) { return false; } };
+    const lsSave = (s, arr) => { try { localStorage.setItem(lsKey(s), JSON.stringify(s === 'jobs' ? arr.map(j => ({ ...j, photos: [], signature: '' })) : s === 'parts' ? arr.map(p => ({ ...p, photo: '' })) : arr)); return true; } catch (e) { return false; } };
     async function guard(fn, fallback) { if (useLS) return fallback(); try { return await fn(); } catch (e) { useLS = true; return fallback(); } }
     return {
       all: s => guard(() => tx(s, 'readonly', st => st.getAll()).then(r => r || []), () => lsAll(s)),
@@ -1255,10 +1273,10 @@ const LabelParser = (() => {
   // ======================================================================
   // Photos
   // ======================================================================
-  function compress(file) {
+  function compress(file, max, q) {
     return new Promise(res => {
       const img = new Image(); const url = URL.createObjectURL(file);
-      img.onload = () => { const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.72)); };
+      img.onload = () => { max = max || 1280; const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', q || 0.72)); };
       img.onerror = () => { URL.revokeObjectURL(url); res(null); }; img.src = url;
     });
   }
@@ -1366,7 +1384,25 @@ const LabelParser = (() => {
   function datalists() {
     const pns = new Set([...stockSummary().map(s => s.partNo), ...parts.map(p => (p.partNo || '').trim()).filter(Boolean)]);
     const sups = new Set(['Shop Stock', 'Amazon', 'Walmart', ...parts.map(p => p.supplier), ...stock.map(s => s.supplier)].filter(Boolean));
-    return `<datalist id="dlParts">${[...pns].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist><datalist id="dlSup">${[...sups].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist>`;
+    const descs = new Set([...parts.map(p => (p.description || '').trim()), ...stock.map(s => (s.description || '').trim())].filter(Boolean));
+    return `<datalist id="dlParts">${[...pns].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist><datalist id="dlSup">${[...sups].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist><datalist id="dlDesc">${[...descs].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist>`;
+  }
+  // What gets added to jobs most, plus what's on the shelf: one tap fills the line out in the field.
+  const SEED_PARTS = ['Oil', 'Air filter', 'Fuel filter', 'Spark plug', 'Blade', 'Drive belt', 'Deck belt', 'Battery', 'Carburetor', 'Pull starter', 'Tire / tube', 'Fuel line', 'Primer bulb', 'Starter solenoid'];
+  function partSuggestions() {
+    const m = new Map(); const blank = d => ({ description: d, partNo: '', supplier: '', unitCost: '', unitSell: '', count: 0, shelf: null });
+    for (const p of [...parts].sort((a, b) => (a.updated || '').localeCompare(b.updated || ''))) {
+      const d = (p.description || '').trim(); if (!d) continue; const k = d.toLowerCase(); const e = m.get(k) || blank(d);
+      e.count++; e.description = d; if (p.partNo) e.partNo = p.partNo; if (p.supplier) e.supplier = p.supplier;
+      if (p.unitCost !== '' && p.unitCost != null) e.unitCost = p.unitCost; if (p.unitSell !== '' && p.unitSell != null) e.unitSell = p.unitSell; m.set(k, e);
+    }
+    for (const s of stockSummary()) {
+      const d = (s.description || s.partNo).trim(); const k = d.toLowerCase(); const e = m.get(k) || blank(d);
+      if (s.onHand > 0) e.shelf = s; else { if (!e.supplier && s.supplier) e.supplier = s.supplier; if (e.unitCost === '' && s.unitCost != null) e.unitCost = s.unitCost; if (e.unitSell === '' && s.unitSell != null) e.unitSell = s.unitSell; }
+      if (!e.partNo) e.partNo = s.partNo; m.set(k, e);
+    }
+    for (const d of SEED_PARTS) { const k = d.toLowerCase(); if (!m.has(k)) m.set(k, blank(d)); }
+    return [...m.values()].sort((a, b) => (b.shelf ? 1 : 0) - (a.shelf ? 1 : 0) || b.count - a.count || a.description.localeCompare(b.description));
   }
 
   // ======================================================================
@@ -1375,28 +1411,40 @@ const LabelParser = (() => {
   function renderParts() {
     const jps = jobParts(cur.id);
     $('partsList').innerHTML = jps.length ? jps.map(p => `<button type="button" class="line ${partActive(p) ? '' : 'off'}" data-id="${p.id}">
-      <span class="l1"><span class="pn">${esc(p.partNo || '—')}</span>${esc(p.description || 'No description')}</span>
+      <span class="l1">${pnTag(p)}${esc(p.description || 'No description')}</span>
       <span class="amt">${fmtMoney(num(p.qty) * num(p.unitSell))}<small>${esc(String(num(p.qty)))} × ${fmtMoney(p.unitSell)}</small></span>
-      <span class="l2">${esc(p.status)} · ${esc(p.supplier || 'no supplier yet')}${p.supplierOrderNo ? ' #' + esc(p.supplierOrderNo) : ''}${partOnOrder(p) && p.expected ? ' · expected ' + esc(usDate(p.expected)) : ''}${p.received && !partOpen(p) ? ' · received ' + esc(usDate(p.received)) : ''}</span></button>`).join('')
-      : `<div class="note">No parts yet. Parts ordered for this job or taken off the shelf go here; they total on the invoice.</div>`;
+      <span class="l2">${p.photo ? '📷 ' : ''}${esc(p.status)} · ${esc(p.supplier || 'no supplier yet')}${p.supplierOrderNo ? ' #' + esc(p.supplierOrderNo) : ''}${partOnOrder(p) && p.expected ? ' · expected ' + esc(usDate(p.expected)) : ''}${p.received && !partOpen(p) ? ' · received ' + esc(usDate(p.received)) : ''}</span></button>`).join('')
+      : `<div class="note">No parts yet. In the field, just type what it is (or tap a quick pick) and snap a photo of the part — part numbers, supplier and prices can be filled in later from the Parts tab. Everything here totals on the invoice.</div>`;
     $('partsList').querySelectorAll('.line').forEach(b => b.onclick = () => partSheet(b.dataset.id));
     const inv = invoice({ ...collect(), id: cur.id }, jps);
     const nn = jps.filter(partNeeded).length, oo = jps.filter(partOnOrder).length; $('partsNote').textContent = jps.length ? `Cost ${fmtMoney(inv.partsCost)} · sell ${fmtMoney(inv.partsSell)}${nn ? ` · ${nn} to order` : ''}${oo ? ` · ${oo} on order` : ''}` : '';
   }
   $('btnAddPart').onclick = async () => { if (!cur.saved) { const j = await saveJob({ silent: true }); if (!j) return; } partSheet(null); };
+  const pnTag = p => p.partNo ? `<span class="pn">${esc(p.partNo)}</span>` : `<span class="pn needpn">no part # yet</span>`;
   function partSheet(id, jobId) {
-    const p = id ? parts.find(x => x.id === id) : { dateOrdered: '', partNo: '', description: '', qty: 1, supplier: '', supplierOrderNo: '', unitCost: '', unitSell: '', status: 'Needed', expected: '', received: '', notes: '' };
+    const p = id ? parts.find(x => x.id === id) : { dateOrdered: '', partNo: '', description: '', qty: 1, supplier: '', supplierOrderNo: '', unitCost: '', unitSell: '', status: 'Needed', expected: '', received: '', notes: '', photo: '' };
     const jid = id ? p.jobId : (jobId || cur.id); const pj = jobs.find(x => x.id === jid);
+    let photo = p.photo || ''; const sugg = partSuggestions(); const shelf = stockSummary();
+    const moreOpen = !!(p.dateOrdered || p.supplierOrderNo || p.expected || p.received || p.notes);
     const card = openSheet(`<h3>${id ? 'Part line' : 'Add part'}</h3>${pj ? `<p class="note" style="margin:0">${esc(fmtRO(pj.ro))} · ${esc(pj.customer)}${equipText(pj) ? ' · ' + esc(equipText(pj)) : ''}</p>` : ''}${datalists()}<div class="grid" style="margin-top:8px">
-      ${field('s_partNo', 'Part #', 'mono', p.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', p.supplier, 'list=dlSup')}
-      ${field('s_description', 'Description', 'text', p.description, 'wide')}<div class="wide" id="s_find"></div>
-      ${field('s_qty', 'Qty', 'int', p.qty)}${field('s_unitCost', 'Unit Cost $', 'money', p.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', p.unitSell)}
-      ${field('s_status', 'Status', 'select', opts(PART_STATUSES, p.status))}
+      ${field('s_description', 'What it is', 'text', p.description, 'wide list=dlDesc')}
+      <div class="wide"><div class="quick" id="s_quick">${sugg.slice(0, 12).map((e, i) => `<button type="button" class="chip ${e.shelf ? 'shelf' : ''}" data-i="${i}" title="${e.shelf ? 'On the shelf' : e.partNo ? 'Part # ' + esc(e.partNo) : ''}">${esc(e.description)}${e.shelf ? ` · ${e.shelf.onHand} on shelf` : ''}</button>`).join('')}${shelf.length ? `<button type="button" class="chip" id="s_shelfBtn">From the shelf… (${shelf.length})</button>` : ''}</div><div class="shelfpick" id="s_shelf" hidden>${shelf.map(s => `<button type="button" class="${s.onHand <= 0 ? 'zero' : ''}" data-pn="${esc(s.partNo)}"><span class="pn">${esc(s.partNo)}</span><span>${esc(s.description || '')}</span><span>${s.onHand} on hand</span></button>`).join('')}</div></div>
+      ${field('s_qty', 'Qty', 'int', p.qty)}${field('s_status', 'Status', 'select', opts(PART_STATUSES, p.status))}
+      ${field('s_partNo', 'Part # (blank is fine for now)', 'mono', p.partNo, 'list=dlParts')}${field('s_supplier', 'Supplier', 'text', p.supplier, 'list=dlSup')}
+      <div class="wide" id="s_find"></div>
+      ${field('s_unitCost', 'Unit Cost $', 'money', p.unitCost)}${field('s_unitSell', 'Unit Sell $', 'money', p.unitSell)}
+      <div class="wide pphoto" id="s_photoBox"><input type="file" accept="image/*" capture="environment" id="s_photoIn" hidden><button type="button" class="btn sm" id="s_photoBtn">📷 Photo of the part</button><span class="hint" id="s_photoHint">So whoever orders it can see what it is. Travels with the line to the other device.</span></div>
+      <details class="more" ${moreOpen ? 'open' : ''}><summary>Ordering details — order #, dates, notes</summary><div class="grid">
       ${field('s_dateOrdered', 'Date Ordered', 'date', p.dateOrdered)}${field('s_supplierOrderNo', 'Supplier Order #', 'text', p.supplierOrderNo)}${field('s_expected', 'Expected', 'date', p.expected)}${field('s_received', 'Received', 'date', p.received)}
-      ${field('s_notes', 'Notes', 'textarea', p.notes)}</div>
+      ${field('s_notes', 'Notes', 'textarea', p.notes)}</div></details></div>
       <div class="hint" id="s_stockHint" style="margin-top:6px;font-size:13px;color:var(--accent-ink)"></div>
       <div class="acts row"><button type="button" class="btn primary" id="s_save">${id ? 'Save line' : 'Add line'}</button><button type="button" class="btn quiet" id="s_cancel">Cancel</button>${id ? '<button type="button" class="btn danger" id="s_del" style="grid-column:1/-1">Remove this line</button>' : ''}</div>`);
     const g = k => card.querySelector('#s_' + k);
+    g('description').placeholder = 'e.g. air filter, drive belt, carb kit';
+    const renderPhoto = () => { const old = card.querySelector('#s_photoBox .thumb'); if (old) old.remove(); g('photoHint').hidden = !!photo; if (photo) { const t = document.createElement('div'); t.className = 'thumb'; t.innerHTML = `<img src="${photo}" alt="Photo of the part"><button type="button" aria-label="Remove photo">×</button>`; t.querySelector('button').onclick = () => { photo = ''; renderPhoto(); }; g('photoBox').appendChild(t); } };
+    g('photoBtn').onclick = () => g('photoIn').click();
+    g('photoIn').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const d = await compress(f, 720, 0.62); if (d) { photo = d; renderPhoto(); } else toast('Could not read that photo'); });
+    renderPhoto();
     const hint = () => {
       const pn = (g('partNo').value || '').trim().toUpperCase(); const s = pn ? stockByPN().get(pn) : null; const isShop = (g('supplier').value || '').trim().toLowerCase() === 'shop stock';
       if (s && isShop) { g('stockHint').textContent = `Shop Stock: ${s.onHand} on hand${s.onOrder ? `, ${s.onOrder} on order` : ''}. ${s.unitSell != null ? 'Sells at ' + fmtMoney(s.unitSell) + '.' : ''}`; if (!g('description').value && s.description) g('description').value = s.description; if (g('unitCost').value === '' && s.unitCost != null) g('unitCost').value = s.unitCost; if (g('unitSell').value === '' && s.unitSell != null) g('unitSell').value = s.unitSell; if (!id && g('status').value === 'Needed') g('status').value = 'Installed'; }
@@ -1404,13 +1452,25 @@ const LabelParser = (() => {
       else if (s && !isShop) g('stockHint').textContent = `This part # is on the shelf (${s.onHand} on hand). Pick supplier Shop Stock to use one from stock.`;
       else g('stockHint').textContent = '';
     };
-    const findRow = () => { g('find').innerHTML = findLinks(partQuery({ partNo: g('partNo').value.trim(), description: g('description').value.trim() }, pj), [supplierKey(g('supplier').value), 'google', 'ebay'].filter((k, i, arr) => arr.indexOf(k) === i)); };
+    const findRow = () => { const pn = g('partNo').value.trim(); const keys = pn ? [supplierKey(g('supplier').value), 'google', 'ebay'] : [supplierKey(g('supplier').value), 'google', ...(pj && (pj.make || pj.model) ? ['oem'] : []), 'ebay']; g('find').innerHTML = findLinks(partQuery({ partNo: pn, description: g('description').value.trim() }, pj), keys.filter((k, i, arr) => arr.indexOf(k) === i), pn ? 'Find it' : 'Find the part #'); };
     g('partNo').addEventListener('input', () => { hint(); findRow(); }); g('supplier').addEventListener('input', () => { hint(); findRow(); }); g('description').addEventListener('input', findRow); hint(); findRow();
+    // quick picks: a past part fills in what was used last time; a shelf part becomes Shop Stock
+    const pick = e => {
+      g('description').value = e.description;
+      if (e.shelf) { g('partNo').value = e.shelf.partNo; g('supplier').value = 'Shop Stock'; if (e.shelf.unitCost != null) g('unitCost').value = e.shelf.unitCost; if (e.shelf.unitSell != null) g('unitSell').value = e.shelf.unitSell; }
+      else { if (e.partNo) g('partNo').value = e.partNo; if (e.supplier) g('supplier').value = e.supplier; if (e.unitCost !== '') g('unitCost').value = e.unitCost; if (e.unitSell !== '') g('unitSell').value = e.unitSell; }
+      g('shelf').hidden = true; hint(); findRow();
+    };
+    g('quick').querySelectorAll('.chip[data-i]').forEach(b => b.onclick = () => pick(sugg[+b.dataset.i]));
+    const shelfBtn = g('shelfBtn'); if (shelfBtn) shelfBtn.onclick = () => { g('shelf').hidden = !g('shelf').hidden; };
+    g('shelf').querySelectorAll('button').forEach(b => b.onclick = () => { const s = shelf.find(x => x.partNo === b.dataset.pn); if (!s) return;
+      // none on hand: fill the line from the stock record but leave it to be ordered from the usual supplier
+      pick(s.onHand > 0 ? { description: s.description || s.partNo, shelf: s, partNo: s.partNo, supplier: '', unitCost: '', unitSell: '' } : { description: s.description || s.partNo, shelf: null, partNo: s.partNo, supplier: s.supplier || '', unitCost: s.unitCost == null ? '' : s.unitCost, unitSell: s.unitSell == null ? '' : s.unitSell }); });
     g('status').addEventListener('change', () => { const st = g('status').value; if ((st === 'Received' || st === 'Installed') && !g('received').value) g('received').value = todayISO(); if ((st === 'Ordered' || st === 'Backordered') && !g('dateOrdered').value) g('dateOrdered').value = todayISO(); });
     g('cancel').onclick = closeSheet;
     g('save').onclick = async () => {
-      const line = { id: id || uid(), jobId: jid, dateOrdered: g('dateOrdered').value, partNo: g('partNo').value.trim(), description: g('description').value.trim(), qty: g('qty').value === '' ? 1 : num(g('qty').value), supplier: g('supplier').value.trim(), supplierOrderNo: g('supplierOrderNo').value.trim(), unitCost: g('unitCost').value === '' ? '' : num(g('unitCost').value), unitSell: g('unitSell').value === '' ? '' : num(g('unitSell').value), status: g('status').value, expected: g('expected').value, received: g('received').value, notes: g('notes').value.trim(), created: (p.created || new Date().toISOString()), updated: new Date().toISOString() };
-      if (!line.description && !line.partNo) { toast('A part # or a description is needed'); return; }
+      const line = { id: id || uid(), jobId: jid, dateOrdered: g('dateOrdered').value, partNo: g('partNo').value.trim(), description: g('description').value.trim(), qty: g('qty').value === '' ? 1 : num(g('qty').value), supplier: g('supplier').value.trim(), supplierOrderNo: g('supplierOrderNo').value.trim(), unitCost: g('unitCost').value === '' ? '' : num(g('unitCost').value), unitSell: g('unitSell').value === '' ? '' : num(g('unitSell').value), status: g('status').value, expected: g('expected').value, received: g('received').value, notes: g('notes').value.trim(), photo, created: (p.created || new Date().toISOString()), updated: new Date().toISOString() };
+      if (!line.description && !line.partNo) { toast('Say what the part is — a part # can come later'); g('description').focus(); return; }
       if (!(await Data.save('parts', line))) { toast('Could not save on this device'); return; }
       parts = parts.filter(x => x.id !== line.id); parts.push(line); closeSheet(); afterPartsChange(); toast(id ? 'Line saved' : 'Part added');
     };
@@ -1435,9 +1495,9 @@ const LabelParser = (() => {
     const when = partNeeded(p) ? (p.dateOrdered ? 'needed since ' + usDate(p.dateOrdered) : '') : partOnOrder(p) ? [p.dateOrdered ? 'ordered ' + usDate(p.dateOrdered) : '', p.expected ? (late ? 'was expected ' : 'expected ') + usDate(p.expected) : ''].filter(Boolean).join(' · ') : (p.received ? 'received ' + usDate(p.received) : '');
     const fq = partQuery(p, j); const qa = partOnOrder(p) ? `<button type="button" class="btn sm qa" data-qa="received" data-id="${p.id}">Received</button>` : p.status === 'Received' ? `<button type="button" class="btn sm qa" data-qa="installed" data-id="${p.id}">Installed</button>` : partNeeded(p) ? `${fq ? `<a class="btn sm qa" target="_blank" rel="noopener" href="${SEARCH[supplierKey(p.supplier)][1](fq)}" title="Search ${SEARCH[supplierKey(p.supplier)][0]}">Find</a>` : ''}<button type="button" class="btn sm qa" data-qa="order" data-id="${p.id}">Ordered</button>` : '';
     return `<div class="line row ${partActive(p) ? '' : 'off'} ${partNeeded(p) ? 'needed' : ''} ${late ? 'late' : ''}" data-id="${p.id}" role="button" tabindex="0">
-      <span class="l1"><span class="pn">${esc(p.partNo || '—')}</span>${esc(p.description || 'No description')}</span>
+      <span class="l1">${pnTag(p)}${esc(p.description || 'No description')}</span>
       <span class="amt">${esc(String(num(p.qty)))} × ${fmtMoney(p.unitCost)}<small>${esc(p.status)}</small></span>${qa}
-      <span class="l2">${j ? `<b>${esc(fmtRO(j.ro))}</b> ${esc(j.customer)}${[j.make, j.model].filter(Boolean).length ? ' · ' + esc([j.make, j.model].filter(Boolean).join(' ')) : (j.type ? ' · ' + esc(j.type) : '')}` : 'job not found'}${p.supplierOrderNo ? ' · #' + esc(p.supplierOrderNo) : ''}${when ? ' · ' + esc(when) : ''}</span></div>`;
+      <span class="l2">${p.photo ? '📷 ' : ''}${j ? `<b>${esc(fmtRO(j.ro))}</b> ${esc(j.customer)}${[j.make, j.model].filter(Boolean).length ? ' · ' + esc([j.make, j.model].filter(Boolean).join(' ')) : (j.type ? ' · ' + esc(j.type) : '')}` : 'job not found'}${p.supplierOrderNo ? ' · #' + esc(p.supplierOrderNo) : ''}${when ? ' · ' + esc(when) : ''}</span></div>`;
   }
   function renderOrders() {
     const today = todayISO(); const q = ($('ordersSearch').value || '').toLowerCase().trim(); const jmap = new Map(jobs.map(j => [j.id, j]));
@@ -1847,6 +1907,9 @@ const LabelParser = (() => {
     const label = { off: 'off', connecting: 'connecting…', on: 'on', offline: 'offline — will catch up', error: 'problem' }[st] || st;
     dot.title = 'Sync ' + label; $('syncStatus').textContent = label + (st === 'error' && detail ? ': ' + (detail.message || detail.code || String(detail)).slice(0, 120) : '');
     $('syncOff').hidden = on; $('syncOn').hidden = !on;
+    $('backupNote').innerHTML = on
+      ? '<b>Records are on this device and in the shared database.</b> A backup is still the undo button: the shared copy keeps no history, so a job deleted or changed by mistake is gone everywhere, and only a backup brings it back. It is also the only other copy of this device\'s photos, and it works without Google if that account is ever lost. Back up every couple of weeks from the device with the photos; keep the file in Google Drive, iCloud Drive or OneDrive.'
+      : '<b>Everything lives on this device.</b> Back up once a week; keep the file in Google Drive, iCloud Drive or OneDrive, in a folder shared with whoever else should have a copy. Restoring a backup on another device brings everything across, photos included.';
     if (on) { $('syncProject').textContent = Sync.cfg.f.projectId; $('syncKeyOut').value = Sync.encodeKey(Sync.cfg); $('syncLast').textContent = Sync.lastChange ? 'Last change received ' + new Date(Sync.lastChange).toLocaleString('en-US') + '.' : 'No changes received from other devices yet.'; }
     if (IN_CLAUDE) { $('syncStatus').textContent = 'works in the installed copy, not in this preview'; $('btnSyncConnect').disabled = true; $('btnSyncGenerate').disabled = true; }
   }
