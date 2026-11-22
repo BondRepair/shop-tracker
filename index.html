@@ -917,17 +917,30 @@ const ReceiptParser = (() => {
     ['harbor freight', 'Harbor Freight'], ["o'reilly", "O'Reilly Auto Parts"], ['oreilly', "O'Reilly Auto Parts"], ['autozone', 'AutoZone'], ['auto zone', 'AutoZone'], ['advance auto', 'Advance Auto Parts'], ['napa', 'NAPA'], ['rural king', 'Rural King'],
     ['amazon', 'Amazon'], ['ebay', 'eBay'], ['ace hardware', 'Ace Hardware'], ['northern tool', 'Northern Tool'], ['menards', 'Menards'], ['jacks small engine', "Jack's Small Engines"], ['partstree', 'PartsTree'], ['ereplacementparts', 'eReplacementParts'], ['stens', 'Stens'], ['rotary', 'Rotary'], ['dollar general', 'Dollar General'], ['target', 'Target'], ['sam\'s club', "Sam's Club"], ['costco', 'Costco'], ['batteries plus', 'Batteries Plus'], ['interstate', 'Interstate Batteries']];
   // lines that are never parts even though they carry a price
-  const HARD_SKIP = /(sub\s*total|total|\btax\b|tend(er)?|change|\bcash\b|visa|debit|credit|master\s*card|amex|discover|\bcard\b|balance|shipping|handling|coupon|discount|saving|refund|gift\s*card|reward|surcharge|donation|round\s*up|amount due|paid|payment|\bdue\b|approval|auth\b|account|acct)/i;
+  const HARD_SKIP = /(sub\s*total|total|\bstore\s*#?\s*\d|\bst#|\bop#|\bte#|\btr#|\btc#|\btax\b|tend(er)?|change|\bcash\b|visa|debit|credit|master\s*card|amex|discover|\bcard\b|balance|shipping|handling|coupon|discount|saving|refund|gift\s*card|reward|surcharge|donation|round\s*up|amount due|paid|payment|\bdue\b|approval|auth\b|account|acct)/i;
   // header / footer chatter that should not become a description
   const SKIP = /\b(subtotal|total|tax|balance|cash|visa|debit|credit|master\s*card|mastercard|amex|discover|tend(er)?|amount|approval|appr|auth|account|acct|card|chip|aid:|tvr|tsi|arc|iad|savings|you saved|items? sold|tc#|st#|op#|te#|tr#|ref#|ref |thank|return|policy|survey|www\.|\.com|\.net|phone|tel|manager|cashier|register|lane|store\s*#|receipt|invoice|order\s*(#|number|total|placed|summary|confirmation)|shipping|handling|promotion|gift card|rewards|member|points|coupon|discount|void|refund|signature|customer copy|merchant copy|terminal|trans\b|transaction|batch|seq|low price|eft|pin verified|network id|duplicate|hello|arriving|delivered|sold by|ships from|save money|live better)\b/i;
   const LEAD_QTY_EA = /^(\d{1,3})\s*(?:EA|ea|Ea|X|x|×|pcs?|PCS?)\b\.?\s+(.+)$/;           // "2 EA CHAMPION SPARK PLUG @ 2.99"
   const LEAD_QTY_AT = /^(\d{1,3})\s+(.+?)\s*@\s*\$?\s*(\d{1,4}[.,]\d{2})\s*(?:ea|each|\/ea)?$/i;   // "2 SPARK PLUG @ 2.99"
   const TAIL_AT = /\s*@\s*\$?\s*(\d{1,4}[.,]\d{2})\s*(?:ea|each|\/ea)?$/i;
-  const PRICE_END = /(-?)\$?\s*(\d{1,4}[.,]\d{2})\s*(?:[-]?\s*[A-Z]{1,2}\b)?\s*$/;      // 3.97  3.97 N  $3.97  3.97-A  12,99
+  const PRICE_END = /(-?)\$?\s*(\d{1,4}\s?[.,·]\s?\d{2})\s*(?:[-]?\s*[A-Z]{1,2}\b)?(?:\s+[^\d\s$]{1,3})?\s*$/;      // 3.97  3.97 N  $3.97  3.97-A  12,99  3. 97
+  const PRICE_END_SP = /(-?)\$?\s*(\d{1,4}) (\d{2})\s*[A-Z]{1,2}\s*$/;                           // "3 97 X": the dot did not survive the camera, the tax flag proves it is a price
+  // where does the price at the end of a line start, and what is it? null when the line has no price
+  const ANY_PRICE = /(-?)\$?\s*(\d{1,4}\s?[.,·]\s?\d{2})(?![\d%])/g;
+  function tailPrice(l) {
+    if (/\d{1,2}:\d{2}\s*(?:[AP]M)?\s*$/i.test(l)) return null;                                    // a clock time, not a price
+    let m = l.match(PRICE_END); if (m) return { index: m.index, value: num(m[2].replace(/\s/g, '').replace(/[,·]/, '.')), neg: m[1] === '-' };
+    m = l.match(PRICE_END_SP); if (m) return { index: m.index, value: num(m[2] + '.' + m[3]), neg: m[1] === '-' };
+    // the camera often adds junk after the price ("3.97 X %: aA a"): take the last price on the line when nothing after it has a digit
+    let last = null; for (const mm of l.matchAll(ANY_PRICE)) last = mm;
+    if (last) { const tail = l.slice(last.index + last[0].length); if (!/\d/.test(tail) && tail.length <= 14 && /\d/.test(l.slice(0, last.index)) || !/\d/.test(tail) && tail.length <= 14 && /[A-Za-z]{2,}/.test(l.slice(0, last.index))) return { index: last.index, value: num(last[2].replace(/\s/g, '').replace(/[,·]/, '.')), neg: last[1] === '-' }; }
+    return null;
+  }
+  const PART_LINE = /^#?\s*(?:item|part|sku|p\/n|pn|mfr)?\s*#?:?\s*([A-Z0-9][A-Z0-9\-\/.]{3,19})\s*$/i;      // "MGL51348" / "ITEM 58349": a part number printed on its own line under the item
   const INLINE_QTY = /(?:^|\s)(\d{1,3})\s*(?:@|x|X|×|at|AT|ea|EA|each|EACH)\s*\$?\s*(\d{1,4}[.,]\d{2})(?:\s*(?:ea|EA|each|\/ea))?/;   // 2 @ 9.98   3 x 4.99   1 EA 2.99
   const QTY_LINE = /^\s*(?:qty\s*:?\s*)?(\d{1,3})\s*(?:@|x|X|×|at|AT|ea|EA|for)\s*(?:1\s*for\s*)?\$?\s*(\d{1,4}[.,]\d{2})(?:\s*(?:ea|each|\/ea))?\s*(?:[-]?\$?\s*(\d{1,4}[.,]\d{2}))?\s*(?:[A-Z]{1,2}\b)?\s*$/i;  // "2 AT 1 FOR 3.97 7.94 X", "2@12.97", "QTY 2 @ 4.99"
   const QTY_WORD = /^\s*(?:qty|quantity)\s*:?\s*(\d{1,3})\s*$/i;
-  const UPC = /\b(\d{11,14})\b/; const SKU_LEAD = /^\s*#?(\d{5,10})\s+(?=[A-Za-z])/; const SKU_TAIL = /\s+#?(\d{6,10})\s*$/;
+  const UPC = /\b(\d{11,14})\b/; const SKU_LEAD = /^\s*#?(\d{5,10})\s+(?=\S)/; const SKU_TAIL = /\s+#?(\d{6,10})\s*$/;
   const num = s => parseFloat(String(s).replace(',', '.'));
   const money = n => Math.round(n * 100) / 100;
 
@@ -935,10 +948,10 @@ const ReceiptParser = (() => {
     return s.replace(UPC, ' ').replace(/<[A-Z]>/g, ' ').replace(/\b[FNXTOAE]\b\s*$/, ' ').replace(/\s+[-]?\$?\d{1,4}[.,]\d{2}\s*$/, ' ').replace(/[|_*~]+/g, ' ')
       .replace(/\s{2,}/g, ' ').replace(/^[\s\-:.#]+|[\s\-:.#]+$/g, '').trim();
   }
+  function knownStore(lines) { const head = lines.slice(0, 12).join(' \n ').toLowerCase(); for (const [k, name] of STORES) if (head.includes(k)) return name; return ''; }
   function findStore(lines) {
-    const head = lines.slice(0, 10).join(' \n ').toLowerCase();
-    for (const [k, name] of STORES) if (head.includes(k)) return name;
-    const first = lines.slice(0, 4).find(l => /[A-Za-z]{3,}/.test(l) && !PRICE_END.test(l) && !/\d{3}[-.)\s]\d{3}[-.\s]\d{4}/.test(l));
+    const known = knownStore(lines); if (known) return known;
+    const first = lines.slice(0, 4).find(l => /[A-Za-z]{3,}/.test(l) && !tailPrice(l) && !/\d{3}[-.)\s]\d{3}[-.\s]\d{4}/.test(l));
     return first ? cleanDesc(first).replace(/\s+/g, ' ').replace(/\b\w+/g, w => w.length > 3 ? w[0] + w.slice(1).toLowerCase() : w).slice(0, 40) : '';
   }
   const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
@@ -953,7 +966,7 @@ const ReceiptParser = (() => {
     return '';
   }
   function findTotals(lines) {
-    const t = {}; const grab = (re, key) => { for (const l of lines) { if (re.test(l) && PRICE_END.test(l)) { const m = l.match(PRICE_END); if (t[key] == null) t[key] = num(m[2]); } } };
+    const t = {}; const grab = (re, key) => { for (const l of lines) { const tp = tailPrice(l); if (re.test(l) && tp && t[key] == null) t[key] = tp.value; } };
     grab(/sub\s*total/i, 'subtotal'); grab(/\btax\b/i, 'tax'); grab(/(^|\s)total\b(?!\s*(items|savings|qty|number))/i, 'total');
     return t;
   }
@@ -963,8 +976,9 @@ const ReceiptParser = (() => {
 
   function parse(text) {
     // OCR fixes that are safe on receipts: letters inside a price are digits
-    const fixed = String(text || '').replace(/\r/g, '').replace(/(?<=\d)[Oo](?=\d|[.,]\d)/g, '0').replace(/(?<=[.,]\d)[Oo]\b/g, '0').replace(/(?<=\d[.,])[Oo]/g, '0').replace(/(?<=\d)[Il](?=\d)/g, '1').replace(/\b[Oo]{1,2}(?=\d{9,})/g, m => '0'.repeat(m.length)).replace(/\$\s*(?=\d)/g, '$');
-    const lines = fixed.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const fixed = String(text || '').replace(/\r/g, '').replace(/(?<=\d)[Oo](?=\d|[.,]\d)/g, '0').replace(/(?<=[.,]\d)[Oo]\b/g, '0').replace(/(?<=\d[.,])[Oo]/g, '0').replace(/(?<=\d)[Il](?=\d)/g, '1').replace(/\b[Oo]{1,2}(?=\d{9,})/g, m => '0'.repeat(m.length)).replace(/(?<=\d{3})[Ss](?=\d{2})/g, '5').replace(/(?<=\d{3})[Bb](?=\d{2})/g, '8').replace(/(?<=\d)[Il](?=[.,]\d{2}\b)/g, '1').replace(/(?<=[.,])[Il](?=\d\b)/g, '1').replace(/\$\s*(?=\d)/g, '$');
+    const joined = fixed.replace(/\b(\d{2,8}) (\d{3,11})\b(?![.,]\d)/g, (m, a, b) => (a + b).length >= 11 && (a + b).length <= 14 ? a + b : m);
+    const lines = joined.split('\n').map(l => l.replace(/\.{2,}/g, ' ').replace(/(?<=[A-Za-z])\.(?=\s|$)/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean);   // "PLUG...2.49" -> "PLUG 2.49", "CHAMPION." -> "CHAMPION"
     const items = []; let pendingDesc = null, pendingCode = '', pendingQty = 0;
     const pushItem = (description, qty, unitCost, lineTotal, code, raw, flags) => {
       description = cleanDesc(description); if (description.replace(/[^A-Za-z]/g, '').length < 2) return null;
@@ -972,12 +986,12 @@ const ReceiptParser = (() => {
     };
     const clearPending = () => { pendingDesc = null; pendingCode = ''; pendingQty = 0; };
     for (let i = 0; i < lines.length; i++) {
-      const l = lines[i]; const pm = l.match(PRICE_END); const nextPm = (lines[i + 1] || '').match(PRICE_END);
+      const l = lines[i]; const pm = tailPrice(l); const nextPm = tailPrice(lines[i + 1] || '');
       // a bare quantity line: "2 @ 12.97" / "2 AT 1 FOR 3.97 7.94 X" / "QTY 2 @ 4.99" — belongs to the item before, or after (Home Depot prints it first)
       const ql = l.match(QTY_LINE);
       if (ql) {
         const qty = +ql[1], unit = num(ql[2]), total = ql[3] != null ? num(ql[3]) : money(qty * unit);
-        const nextMatches = nextPm && near(num(nextPm[2]), total) && !HARD_SKIP.test(lines[i + 1]);
+        const nextMatches = nextPm && near(nextPm.value, total) && !HARD_SKIP.test(lines[i + 1]);
         if (pendingDesc && !nextMatches) { pushItem(pendingDesc, qty, unit, total, pendingCode, pendingDesc + ' / ' + l); clearPending(); }
         else if (!nextMatches && items.length && near(items[items.length - 1].lineTotal, total)) { const it = items[items.length - 1]; it.qty = qty; it.unitCost = money(unit); }
         else if (!nextMatches && items.length && near(items[items.length - 1].unitCost, total) && qty > 1) { const it = items[items.length - 1]; it.qty = qty; it.unitCost = money(unit); it.lineTotal = money(total); }
@@ -988,15 +1002,24 @@ const ReceiptParser = (() => {
       if (qw) { if (pendingDesc) pendingQty = +qw[1]; else if (items.length) { const it = items[items.length - 1]; it.qty = +qw[1]; it.unitCost = money(it.lineTotal / it.qty); } continue; }
       if (pm && HARD_SKIP.test(l.slice(0, pm.index))) { clearPending(); continue; }                 // totals, payments, discounts: never parts
       if (!pm && (SKIP.test(l) || isStoreLine(l))) continue;                                           // header / footer chatter
+      // a part number on its own line right under an item (O'Reilly, Advance, Harbor Freight print "MGL51348" / "ITEM 58349" that way)
+      const pl = !pm && items.length && !pendingDesc && l.match(PART_LINE);
+      if (pl && /\d/.test(pl[1]) && !/^\d{1,3}$/.test(pl[1])) { const it = items[items.length - 1]; if (!it.code || /^\d{11,14}$/.test(it.code)) it.code = pl[1]; continue; }
       if (pm) {
-        if (pm[1] === '-' || /-\s*[A-Z]?\s*$/.test(l)) { continue; }                                   // negative amounts are refunds or coupons
-        let body = l.slice(0, pm.index).trim(); const total = num(pm[2]); let qty = 1, unit = total;
+        if (pm.neg || /-\s*[A-Z]?\s*$/.test(l)) { continue; }                                          // negative amounts are refunds or coupons
+        let body = l.slice(0, pm.index).trim(); const total = pm.value; let qty = 1, unit = total;
         const code = (body.match(UPC) || [])[1] || (body.match(SKU_LEAD) || [])[1] || (body.match(SKU_TAIL) || [])[1] || pendingCode || '';
         const ta = body.match(TAIL_AT); if (ta) { unit = num(ta[1]); body = body.replace(TAIL_AT, ''); qty = Math.max(1, Math.round(total / unit)) || 1; const tq = body.match(/\s(\d{1,3})$/); if (tq && +tq[1] === qty) body = body.slice(0, tq.index); }
         const le = body.match(LEAD_QTY_EA); const la = !le && body.match(LEAD_QTY_AT);
         if (le) { qty = +le[1]; body = le[2]; if (!ta) unit = money(total / qty); }
         else if (la) { qty = +la[1]; body = la[2]; unit = num(la[3]); }
-        else { const iq = body.match(INLINE_QTY); if (iq) { qty = +iq[1]; unit = num(iq[2]); body = body.replace(INLINE_QTY, ' '); } }
+        else {
+          const iq = body.match(INLINE_QTY); if (iq) { qty = +iq[1]; unit = num(iq[2]); body = body.replace(INLINE_QTY, ' '); }
+          else {
+            const lc = body.match(/^(\d{1,3})\s+(.+?)\s+\$?(\d{1,4}[.,]\d{2})$/); if (lc && near(+lc[1] * num(lc[3]), total)) { qty = +lc[1]; unit = num(lc[3]); body = lc[2]; }   // "2  SPARK PLUG  2.49  4.98": qty column, unit column, total
+            else { const tq = body.match(/[A-Za-z]\S*\s+(\d{1,2})$/); if (tq && +tq[1] >= 1 && +tq[1] <= 12 && near(money(total / +tq[1]) * +tq[1], total)) { qty = +tq[1]; unit = money(total / qty); body = body.slice(0, body.length - tq[1].length).trim(); } }   // "PREDATOR ENGINE  1  129.99": qty column after the description
+          }
+        }
         let desc = body.replace(SKU_LEAD, '').replace(SKU_TAIL, '');
         if (pendingDesc && desc.replace(/[^A-Za-z]/g, '').length < 3) {                                // "   007874203866 F  3.97 N" or "$9.49" under a description line
           desc = pendingDesc;
@@ -1005,8 +1028,14 @@ const ReceiptParser = (() => {
         pushItem(desc, qty, unit, total, code, l); clearPending();
         continue;
       }
+      // a Walmart item line whose price the camera lost: words plus a 12-digit UPC is an item even without a price — the price gets typed in
+      const upcHere = (l.match(UPC) || [])[1];
+      if (upcHere && /[A-Za-z]{3,}/.test(l.replace(UPC, '')) && !isStoreLine(l)) {
+        if (nextPm && !HARD_SKIP.test(lines[i + 1]) && (QTY_LINE.test(lines[i + 1]) || !/[A-Za-z]{3,}/.test(lines[i + 1].slice(0, nextPm.index).replace(UPC, '')))) { pendingDesc = cleanDesc(l); pendingCode = upcHere; continue; }   // price is on the next line
+        pushItem(l.replace(UPC, ' '), 1, 0, 0, upcHere, l, { noPrice: true }); clearPending(); continue;
+      }
       // a line with words and no price: probably a description whose price is on the next line (Walmart multi-line, Amazon emails)
-      if (/[A-Za-z]{3,}/.test(l) && l.length <= 90 && !/^(item|description|qty|price|amount)s?\b/i.test(l)) { pendingDesc = cleanDesc(l) || pendingDesc; pendingCode = (l.match(UPC) || [])[1] || pendingCode; }
+      if (/[A-Za-z]{3,}/.test(l) && l.length <= 90 && !/^(item|description|qty|price|amount)s?\b/i.test(l)) { pendingDesc = cleanDesc(l) || pendingDesc; pendingCode = upcHere || pendingCode; }
       else if (/^\d{11,14}$/.test(l)) pendingCode = l;
     }
     // Home Depot style: "2@12.97" printed BEFORE the item line — pair an orphan qty with the next item that matches its total
@@ -1015,13 +1044,14 @@ const ReceiptParser = (() => {
       if (nxt && near(nxt.lineTotal, items[i].lineTotal)) { nxt.qty = items[i].qty; nxt.unitCost = items[i].unitCost; }
       items.splice(i, 1);
     }
-    const totals = findTotals(lines); let itemSum = money(items.reduce((a, b) => a + b.lineTotal, 0));
+    for (const it of items) if (it.noPrice) { it.unitCost = ''; it.lineTotal = ''; }
+    const totals = findTotals(lines); let itemSum = money(items.reduce((a, b) => a + (b.lineTotal || 0), 0));
     // "Quantity: 2" then "$9.49": was that the unit price (Amazon) or the line total? Let the subtotal decide when there is one.
     if (totals.subtotal != null && !near(itemSum, totals.subtotal) && items.some(it => it.priceWasUnit)) {
       const alt = items.map(it => it.priceWasUnit ? money(it.lineTotal / it.qty) : it.lineTotal).reduce((a, b) => a + b, 0);
       if (near(money(alt), totals.subtotal)) { for (const it of items) if (it.priceWasUnit) { it.lineTotal = money(it.lineTotal / it.qty); it.unitCost = money(it.lineTotal / it.qty); } itemSum = money(alt); }
     }
-    return { store: findStore(lines), date: findDate(fixed), orderNo: findOrderNo(fixed), items, totals, itemSum, lines: lines.length };
+    return { store: findStore(lines), storeKnown: !!knownStore(lines), date: findDate(fixed), orderNo: findOrderNo(fixed), items, totals, itemSum, lines: lines.length };
   }
   return { parse };
 })();
@@ -1306,31 +1336,145 @@ const ReceiptParser = (() => {
       })().catch(e => { loading = null; throw e; });
       return loading;
     }
+    const loadImage = file => new Promise((res, rej) => { const img = new Image(); const url = URL.createObjectURL(file); img.onload = () => { URL.revokeObjectURL(url); res(img); }; img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a photo')); }; img.src = url; });
+    const toGray = (px, out) => { for (let i = 0, j = 0; i < px.length; i += 4, j++) out[j] = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; };
     // Downscale, grayscale and stretch contrast: labels read better as high-contrast gray than as color photos.
-    function prepare(file, max) {
-      return new Promise((res, rej) => {
-        const img = new Image(); const url = URL.createObjectURL(file);
-        img.onload = () => {
-          max = max || 1800; const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-          const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-          const d = ctx.getImageData(0, 0, c.width, c.height), px = d.data, hist = new Uint32Array(256);
-          for (let i = 0; i < px.length; i += 4) { const g = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; px[i] = g; hist[g]++; }
-          const total = c.width * c.height; let lo = 0, hi = 255, acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > total * 0.02) { lo = v; break; } } acc = 0; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.02) { hi = v; break; } }
-          const span = Math.max(1, hi - lo); for (let i = 0; i < px.length; i += 4) { const g = Math.max(0, Math.min(255, (px[i] - lo) * 255 / span)); px[i] = px[i + 1] = px[i + 2] = g; }
-          ctx.putImageData(d, 0, 0); res(c);
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('That file is not a photo')); }; img.src = url;
-      });
+    async function prepare(file, max) {
+      const img = await loadImage(file);
+      max = max || 1800; const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height);
+      const d = ctx.getImageData(0, 0, c.width, c.height), px = d.data, hist = new Uint32Array(256);
+      for (let i = 0; i < px.length; i += 4) { const g = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; px[i] = g; hist[g]++; }
+      const total = c.width * c.height; let lo = 0, hi = 255, acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > total * 0.02) { lo = v; break; } } acc = 0; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.02) { hi = v; break; } }
+      const span = Math.max(1, hi - lo); for (let i = 0; i < px.length; i += 4) { const g = Math.max(0, Math.min(255, (px[i] - lo) * 255 / span)); px[i] = px[i + 1] = px[i + 2] = g; }
+      ctx.putImageData(d, 0, 0); return c;
     }
-    // opts.receipt: a tall single column of small print — keep more pixels and tell Tesseract it is one column.
-    let curPSM = '3';
-    async function read(file, onProgress, opts) {
-      opts = opts || {}; const canvas = await prepare(file, opts.receipt ? 2600 : 1800); const w = await getWorker(onProgress);
-      const psm = opts.receipt ? '4' : '3'; if (psm !== curPSM) { try { await w.setParameters({ tessedit_pageseg_mode: psm, preserve_interword_spaces: opts.receipt ? '1' : '0' }); curPSM = psm; } catch (e) {} }
+    // Where is the receipt in the photo? The biggest bright patch (paper on a darker counter). Returns a box in image pixels, or null.
+    function findPaper(img) {
+      const sw = 160, sh = Math.max(8, Math.round(img.height * sw / img.width)); const c = document.createElement('canvas'); c.width = sw; c.height = sh; const x = c.getContext('2d'); x.drawImage(img, 0, 0, sw, sh);
+      const g = new Uint8Array(sw * sh); toGray(x.getImageData(0, 0, sw, sh).data, g);
+      const hist = new Uint32Array(256); for (const v of g) hist[v]++;
+      // Otsu threshold between paper and background
+      const n = sw * sh; let sum = 0; for (let v = 0; v < 256; v++) sum += v * hist[v];
+      let wB = 0, sumB = 0, bestVar = 0, thr = 128; for (let v = 0; v < 256; v++) { wB += hist[v]; if (!wB) continue; const wF = n - wB; if (!wF) break; sumB += v * hist[v]; const mB = sumB / wB, mF = (sum - sumB) / wF, between = wB * wF * (mB - mF) * (mB - mF); if (between > bestVar) { bestVar = between; thr = v; } }
+      // paper in shadow is darker than paper in light but still lighter than the counter: grow the bright patch into the "weak" range too
+      let bgSum = 0, bgN = 0; for (let i = 0; i < n; i++) if (g[i] <= thr) { bgSum += g[i]; bgN++; } const bgMean = bgN ? bgSum / bgN : 0, weakThr = bgMean + (thr - bgMean) * 0.35;
+      const bright = new Uint8Array(n), weak = new Uint8Array(n); for (let i = 0; i < n; i++) { bright[i] = g[i] > thr ? 1 : 0; weak[i] = g[i] > weakThr ? 1 : 0; }
+      const stack = new Int32Array(n);
+      const flood = (mask, seen, seeds) => {   // 4-neighbour flood fill from the seeds; returns area and box
+        let sp = 0; for (const s0 of seeds) if (!seen[s0]) { seen[s0] = 1; stack[sp++] = s0; } let area = 0, x0 = sw, x1 = 0, y0 = sh, y1 = 0; const members = [];
+        while (sp) { const p = stack[--sp]; area++; members.push(p); const py = p / sw | 0, pxx = p - py * sw; if (pxx < x0) x0 = pxx; if (pxx > x1) x1 = pxx; if (py < y0) y0 = py; if (py > y1) y1 = py;
+          if (pxx > 0 && mask[p - 1] && !seen[p - 1]) { seen[p - 1] = 1; stack[sp++] = p - 1; } if (pxx < sw - 1 && mask[p + 1] && !seen[p + 1]) { seen[p + 1] = 1; stack[sp++] = p + 1; }
+          if (py > 0 && mask[p - sw] && !seen[p - sw]) { seen[p - sw] = 1; stack[sp++] = p - sw; } if (py < sh - 1 && mask[p + sw] && !seen[p + sw]) { seen[p + sw] = 1; stack[sp++] = p + sw; } }
+        return { area, box: [x0, y0, x1, y1], members };
+      };
+      const seen = new Uint8Array(n); let best = null;
+      for (let start = 0; start < n; start++) { if (!bright[start] || seen[start]) continue; const r = flood(bright, seen, [start]); if (!best || r.area > best.area) best = r; }
+      if (!best || best.area < n * 0.06) return null;
+      const grown = flood(weak, new Uint8Array(n), best.members);
+      const [x0, y0, x1, y1] = grown.box; if ((x1 - x0 + 1) * (y1 - y0 + 1) > n * 0.96) return null;     // paper fills the frame already
+      const kx = img.width / sw, ky = img.height / sh;
+      const bx = Math.floor(x0 * kx), by = Math.floor(y0 * ky), bw = Math.ceil((x1 - x0 + 1) * kx), bh = Math.ceil((y1 - y0 + 1) * ky);
+      return refinePaper(img, { x: bx, y: by, w: bw, h: bh });
+    }
+    // The bright patch misses paper that sits in deep shadow. Look at a generously padded crop: averaged down a whole column (or row),
+    // paper in shadow is still lighter than the counter, so the strip's true edges show up as steps in the column and row means.
+    function refinePaper(img, b) {
+      const padX = Math.round(b.w * 0.3), padY = Math.round(b.h * 0.1);
+      const x0 = Math.max(0, b.x - padX), y0 = Math.max(0, b.y - padY), x1 = Math.min(img.width, b.x + b.w + padX), y1 = Math.min(img.height, b.y + b.h + padY);
+      const aw = 320, ah = Math.max(8, Math.round((y1 - y0) * aw / (x1 - x0))); const c = document.createElement('canvas'); c.width = aw; c.height = ah; const x = c.getContext('2d');
+      x.drawImage(img, x0, y0, x1 - x0, y1 - y0, 0, 0, aw, ah); const g = new Uint8Array(aw * ah); toGray(x.getImageData(0, 0, aw, ah).data, g);
+      const colMean = new Float32Array(aw), rowMean = new Float32Array(ah);
+      const ry0 = Math.round(ah * 0.2), ry1 = Math.round(ah * 0.8), rx0 = Math.round(aw * 0.2), rx1 = Math.round(aw * 0.8);
+      for (let xx = 0; xx < aw; xx++) { let t = 0; for (let yy = ry0; yy < ry1; yy++) t += g[yy * aw + xx]; colMean[xx] = t / Math.max(1, ry1 - ry0); }
+      for (let yy = 0; yy < ah; yy++) { let t = 0; for (let xx = rx0; xx < rx1; xx++) t += g[yy * aw + xx]; rowMean[yy] = t / Math.max(1, rx1 - rx0); }
+      // the paper's edge is the biggest step down in the profile, with everything beyond it staying dark (a crease is a dip, not a step)
+      const edges = (arr, n, padded) => {
+        const avg = (from, to) => { let t = 0, k = 0; for (let i = Math.max(0, from); i < Math.min(n, to); i++) { t += arr[i]; k++; } return k ? t / k : 0; };
+        const sm = i => avg(i - 3, i + 4); const center = avg(Math.round(n * 0.3), Math.round(n * 0.7)); let first = 0, last = n - 1;
+        const pick = (lo, hi, dir) => {   // dir -1: looking for a rise (left/top edge), +1: a drop (right/bottom edge)
+          const cands = []; for (let i = lo; i < hi; i++) { const d = dir < 0 ? sm(i + 4) - sm(i - 4) : sm(i - 4) - sm(i + 4); if (d > center * 0.08) cands.push([d, i]); }
+          cands.sort((a, b) => b[0] - a[0]);
+          for (const [, i] of cands.slice(0, 6)) { const outside = dir < 0 ? avg(0, i - 3) : avg(i + 4, n), inside = dir < 0 ? avg(i + 4, Math.round(n * 0.7)) : avg(Math.round(n * 0.3), i - 3); if (inside - outside > inside * 0.25) return i; }
+          return -1;
+        };
+        if (padded[0]) { const i = pick(4, Math.round(n * 0.5), -1); if (i >= 0) first = i + 1; }
+        if (padded[1]) { const i = pick(Math.round(n * 0.5), n - 4, 1); if (i >= 0) last = i - 1; }
+        return [first, last];
+      };
+      const cx = edges(colMean, aw, [x0 < b.x, x1 > b.x + b.w]), cy = edges(rowMean, ah, [y0 < b.y, y1 > b.y + b.h]);
+      const sx = (x1 - x0) / aw, sy = (y1 - y0) / ah; const m = 0.02;
+      const nx0 = cx ? x0 + cx[0] * sx : b.x, nx1 = cx ? x0 + (cx[1] + 1) * sx : b.x + b.w, ny0 = cy ? y0 + cy[0] * sy : b.y, ny1 = cy ? y0 + (cy[1] + 1) * sy : b.y + b.h;
+      const w = nx1 - nx0, h = ny1 - ny0;
+      return { x: Math.max(0, Math.floor(nx0 - w * m)), y: Math.max(0, Math.floor(ny0 - h * m)), w: Math.min(img.width, Math.ceil(w * (1 + 2 * m))), h: Math.min(img.height, Math.ceil(h * (1 + 2 * m))) };
+    }
+    // Receipts: crop to the paper, scale so the print is big enough for the reader, then even out the lighting
+    // (local threshold, so a shadow across the strip does not turn half of it black) and sharpen the contrast.
+    async function prepareReceipt(file) {
+      const img = await loadImage(file); const found = findPaper(img); const box = found || { x: 0, y: 0, w: img.width, h: img.height };
+      const targetW = 1700; let s = targetW / box.w; s = Math.min(s, 2.5, 4200 / box.h); s = Math.max(s, Math.min(1, 1700 / box.w));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(box.w * s)); c.height = Math.max(1, Math.round(box.h * s)); const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, box.x, box.y, box.w, box.h, 0, 0, c.width, c.height);
+      const W = c.width, H = c.height, d = ctx.getImageData(0, 0, W, H), px = d.data, g0 = new Uint8Array(W * H); toGray(px, g0);
+
+      // integral image for the local mean
+      const I = new Uint32Array((W + 1) * (H + 1));
+      for (let y = 1; y <= H; y++) { let row = 0; for (let x = 1; x <= W; x++) { row += g0[(y - 1) * W + (x - 1)]; I[y * (W + 1) + x] = I[(y - 1) * (W + 1) + x] + row; } }
+      const boxMean = (x0, y0, x1, y1) => (I[(y1 + 1) * (W + 1) + x1 + 1] - I[y0 * (W + 1) + x1 + 1] - I[(y1 + 1) * (W + 1) + x0] + I[y0 * (W + 1) + x0]) / ((x1 - x0 + 1) * (y1 - y0 + 1));
+      // a small mean takes the camera grain out before thresholding (wider when the crop was enlarged, which enlarges the grain too)
+      const br = s > 1.6 ? 3 : s > 1.15 ? 2 : 1; const g = new Uint8Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) g[y * W + x] = boxMean(Math.max(0, x - br), Math.max(0, y - br), Math.min(W - 1, x + br), Math.min(H - 1, y + br));
+      const r = Math.max(12, Math.round(W / 24)), t = 0.16;
+      // counter left in the crop (corners of a tilted strip, a dark edge): the local mean there is far below the paper's. Find such
+      // a dark class with Otsu over the local means, and only trust it when it is clearly separate and not most of the picture.
+      const lm = new Uint8Array(W * H); const step = 4; const lmHist = new Uint32Array(256);
+      for (let y = 0; y < H; y += step) for (let x = 0; x < W; x += step) { const v = boxMean(Math.max(0, x - r), Math.max(0, y - r), Math.min(W - 1, x + r), Math.min(H - 1, y + r)) | 0; lmHist[v]++; }
+      let darkCut = -1; { let n = 0, sum = 0; for (let v = 0; v < 256; v++) { n += lmHist[v]; sum += v * lmHist[v]; } let wB = 0, sB = 0, bestVar = 0, thr = 0; for (let v = 0; v < 256; v++) { wB += lmHist[v]; if (!wB) continue; const wF = n - wB; if (!wF) break; sB += v * lmHist[v]; const mB = sB / wB, mF = (sum - sB) / wF, bv = wB * wF * (mB - mF) * (mB - mF); if (bv > bestVar) { bestVar = bv; thr = v; } }
+        let nD = 0, sD = 0, nL = 0, sL = 0; for (let v = 0; v < 256; v++) { if (v <= thr) { nD += lmHist[v]; sD += v * lmHist[v]; } else { nL += lmHist[v]; sL += v * lmHist[v]; } }
+        if (nD && nL && nD / n < 0.35 && (sL / nL) - (sD / nD) > 60) darkCut = thr; }
+      for (let y = 0; y < H; y++) {
+        const y0 = Math.max(0, y - r), y1 = Math.min(H - 1, y + r);
+        for (let x = 0; x < W; x++) {
+          const x0 = Math.max(0, x - r), x1 = Math.min(W - 1, x + r); const mean = boxMean(x0, y0, x1, y1);
+          // soft local threshold: ink well below the local paper brightness goes black, paper goes white, edges keep some gray
+          const v = darkCut >= 0 && mean <= darkCut ? 255 : Math.max(0, Math.min(255, 128 + (g[y * W + x] - (mean - Math.max(mean * t, 26))) * 4)); const i = (y * W + x) * 4; px[i] = px[i + 1] = px[i + 2] = v;
+        }
+      }
+      ctx.putImageData(d, 0, 0);
+      // straighten: pick the small rotation that makes the text rows stand out most (sharpest row-ink profile)
+      const angle = skewAngle(c); let out = c;
+      if (Math.abs(angle) >= 0.4) { out = document.createElement('canvas'); out.width = W; out.height = H; const o = out.getContext('2d'); o.fillStyle = '#fff'; o.fillRect(0, 0, W, H); o.translate(W / 2, H / 2); o.rotate(angle * Math.PI / 180); o.drawImage(c, -W / 2, -H / 2); }
+      return { canvas: out, cropped: box.w < img.width || box.h < img.height, scale: s, angle };
+    }
+    function skewAngle(c) {
+      const sw = 360, sh = Math.max(8, Math.round(c.height * sw / c.width)); const a = document.createElement('canvas'); a.width = sw; a.height = sh; const x = a.getContext('2d'); x.drawImage(c, 0, 0, sw, sh);
+      const g = new Uint8Array(sw * sh); toGray(x.getImageData(0, 0, sw, sh).data, g); const ink = []; for (let i = 0; i < g.length; i++) if (g[i] < 100) ink.push(i);
+      if (ink.length < 50) return 0; const cx = sw / 2, cy = sh / 2; let best = 0, bestScore = -1;
+      for (let deg = -6; deg <= 6; deg += 0.5) {
+        const rad = deg * Math.PI / 180, sn = Math.sin(rad), cs = Math.cos(rad); const rows = new Float64Array(sh + 2);
+        for (const i of ink) { const py = i / sw | 0, pxx = i - py * sw; const ry = Math.round((pxx - cx) * sn + (py - cy) * cs + cy); if (ry >= 0 && ry < sh) rows[ry]++; }
+        let score = 0; for (let r = 0; r < sh; r++) score += rows[r] * rows[r];     // sharp rows -> big sum of squares
+        if (score > bestScore) { bestScore = score; best = deg; }
+      }
+      return best;
+    }
+    const PARAMS = { label: { tessedit_pageseg_mode: '3', preserve_interword_spaces: '0', tessedit_char_whitelist: '' }, receipt: { preserve_interword_spaces: '1', tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$.,/#%-&@*:()'\"+= " } };
+    let curParams = '';
+    async function recognize(canvas, mode, psm, onProgress) {
+      const w = await getWorker(onProgress); const key = mode + psm;
+      if (key !== curParams) { try { await w.setParameters({ ...PARAMS[mode], tessedit_pageseg_mode: psm }); curParams = key; } catch (e) {} }
       const { data } = await w.recognize(canvas); return { text: (data.text || '').trim(), confidence: Math.round(data.confidence || 0) };
     }
-    return { read, get ready() { return !!worker; } };
+    async function read(file, onProgress) { const canvas = await prepare(file, 1800); return recognize(canvas, 'label', '3', onProgress); }
+    // Receipts get two passes when the first finds little: one column of lines (6), then column with mixed sizes (4). `score` says how good a text is.
+    async function readReceipt(file, onProgress, score) {
+      const prep = await prepareReceipt(file); const a = await recognize(prep.canvas, 'receipt', '4', onProgress); a.pass = '4';
+      const b = await recognize(prep.canvas, 'receipt', '6', onProgress); b.pass = '6';
+      const sa = score ? score(a.text) : a.confidence, sb = score ? score(b.text) : b.confidence;
+      const best = sb > sa ? b : a, other = sb > sa ? a : b; return { ...best, other, prep };
+    }
+    return { read, readReceipt, prepareReceipt, get ready() { return !!worker; } };
   })();
+  window.__ocrPrepareReceipt = OCR.prepareReceipt;   // for tests: lets the test harness look at the prepared image
   async function readLabelPhoto(which, file) {
     const ta = $(which === 'engine' ? 'scanEngine' : 'scanEquip'), res = $(which === 'engine' ? 'resEngine' : 'resEquip');
     if (IN_CLAUDE) { res.textContent = 'Reading photos works in the installed copy, not in this preview.'; return; }
@@ -1635,12 +1779,16 @@ const ReceiptParser = (() => {
     g('cancel').onclick = closeSheet; g('photoBtn').onclick = () => g('photo').click();
     g('pasteBtn').onclick = () => { g('pasteBox').hidden = !g('pasteBox').hidden; if (!g('pasteBox').hidden) g('text').focus(); };
     const sugg = new Map(partSuggestions().map(e => [e.description.toLowerCase(), e])); const shelfByPN = stockByPN();
+    // the same UPC or SKU seen before: reuse the description you typed last time (receipts abbreviate, you don't) and the sell price
+    const byCode = new Map(); for (const p of [...stock, ...parts].sort((a, b) => (a.updated || '').localeCompare(b.updated || ''))) if (p.partNo && p.description) byCode.set(String(p.partNo).toUpperCase(), p);
     function buildRows() {
       rows = parsed.items.map(it => {
-        const known = sugg.get(it.description.toLowerCase()); const shelf = shelfByPN.get((it.code || '').toUpperCase());
-        const past = known && known.unitSell !== '' && num(known.unitSell) >= num(it.unitCost) ? known.unitSell : (shelf && shelf.unitSell != null && num(shelf.unitSell) >= num(it.unitCost) ? shelf.unitSell : null);
-        const sell = past != null ? past : sellFor(it.unitCost);
-        return { on: true, description: it.description, partNo: it.code || (known && known.partNo) || '', qty: it.qty, unitCost: it.unitCost, unitSell: sell, raw: it.raw };
+        const seen = it.code ? byCode.get(it.code.toUpperCase()) : null; const description = seen ? seen.description : it.description;
+        const known = sugg.get(description.toLowerCase()); const shelf = shelfByPN.get((it.code || '').toUpperCase());
+        const cost = it.unitCost; const okSell = v => v !== '' && v != null && (cost === '' || num(v) >= num(cost));
+        const past = seen && okSell(seen.unitSell) ? seen.unitSell : known && okSell(known.unitSell) ? known.unitSell : (shelf && okSell(shelf.unitSell) ? shelf.unitSell : null);
+        const sell = past != null ? past : sellFor(cost);
+        return { on: true, description, partNo: it.code || (known && known.partNo) || '', qty: it.qty, unitCost: cost, unitSell: sell, raw: it.raw, seen: !!seen };
       });
       if (!rows.length) rows.push({ on: true, description: '', partNo: '', qty: 1, unitCost: '', unitSell: '', raw: '' });
     }
@@ -1677,16 +1825,19 @@ const ReceiptParser = (() => {
       rawText = text; parsed = ReceiptParser.parse(text); g('raw').value = text; buildRows();
       g('store').value = g('store').value || parsed.store; g('date').value = g('date').value || parsed.date || todayISO(); g('orderNo').value = g('orderNo').value || parsed.orderNo;
       g('result').hidden = false; renderRows();
-      g('status').textContent = (note || '') + (parsed.items.length ? ` Found ${parsed.items.length} item${parsed.items.length === 1 ? '' : 's'}. Untick what is not for this ${toShelf ? 'shelf' : 'job'}; fix any word or price by typing over it.` : ' No priced lines found — fix the text under "Text read from the receipt" and Re-read, or type the lines in by hand.');
+      const noPrice = rows.filter(r => r.raw && r.unitCost === '').length, seenN = rows.filter(r => r.seen).length;
+      g('status').textContent = (note || '') + (parsed.items.length ? ` Found ${parsed.items.length} item${parsed.items.length === 1 ? '' : 's'}${noPrice ? `, ${noPrice} without a readable price (type it in)` : ''}${seenN ? `, ${seenN} recognised from earlier receipts` : ''}. Untick what is not for this ${toShelf ? 'shelf' : 'job'}; fix any word or price by typing over it.` : ' No item lines found — fix the text under "Text read from the receipt" and Re-read, or type the lines in by hand.');
     }
     g('photo').addEventListener('change', async e => {
       const f = e.target.files[0]; e.target.value = ''; if (!f) return;
       if (IN_CLAUDE) { g('status').textContent = 'Reading photos works in the installed copy, not in this preview. Paste the text instead.'; return; }
       g('status').textContent = OCR.ready ? 'Reading the receipt…' : 'Loading the reader (first time only, a few seconds)…';
       try {
-        const out = await OCR.read(f, m => { if (m.status === 'recognizing text' && m.progress) g('status').textContent = `Reading the receipt… ${Math.round(m.progress * 100)}%`; else if (/loading|initializ/i.test(m.status)) g('status').textContent = 'Loading the reader (first time only)…'; }, { receipt: true });
+        const score = text => { const r = ReceiptParser.parse(text); return r.items.filter(i => i.unitCost !== '').length * 2 + r.items.filter(i => i.unitCost === '').length + (r.totals.subtotal != null && Math.abs(r.itemSum - r.totals.subtotal) < 0.011 ? 3 : 0) + (r.storeKnown ? 1 : 0); };
+        const out = await OCR.readReceipt(f, m => { if (m.status === 'recognizing text' && m.progress) g('status').textContent = `Reading the receipt… ${Math.round(m.progress * 100)}%`; else if (/loading|initializ/i.test(m.status)) g('status').textContent = 'Loading the reader (first time only)…'; }, score);
         if (!out.text) { g('status').textContent = 'No text found. Flatten the receipt, fill the frame, avoid glare, and try again.'; return; }
-        show((rawText ? rawText + '\n' : '') + out.text, `Read at ${out.confidence}% confidence.`);
+        if (out.other && out.other.text) { const o = ReceiptParser.parse(out.other.text); if (o.storeKnown && !g('store').value) g('store').value = o.store; if (o.date && !g('date').value) g('date').value = o.date; }
+        show((rawText ? rawText + '\n' : '') + out.text, `Read at ${out.confidence}% confidence${out.prep && out.prep.cropped ? ', cropped to the paper' : ''}.`);
         g('photoBtn').textContent = '📷 Add another photo';
       } catch (err) { g('status').textContent = 'Could not read the photo' + (navigator.onLine === false ? ' — the reader needs a connection the first time it is used.' : '.') + ' Paste the text instead.'; }
     });
